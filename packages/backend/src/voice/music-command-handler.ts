@@ -252,34 +252,35 @@ export class MusicCommandHandler {
     try {
       const service = new MusicSourceService(this.prisma);
       const playlist = await service.playlist(args);
-      const items: QueueItem[] = new Array(playlist.tracks.length);
-      let nextIndex = 0;
-      const worker = async () => {
-        while (true) {
-          const index = nextIndex++;
-          if (index >= playlist.tracks.length) return;
-          const song = playlist.tracks[index];
-          const streamUrl = await service.resolve(song);
-          const { filePath } = await downloadYouTube(streamUrl, MUSIC_DIR);
-          items[index] = {
-            id: `playlist_${Date.now()}_${index}`,
-            title: song.title,
-            artist: song.artist,
-            duration: song.duration || undefined,
-            filePath,
-            source: 'music-source',
-            sourceUrl: streamUrl,
-          };
-        }
+      const downloadSong = async (index: number): Promise<QueueItem> => {
+        const song = playlist.tracks[index];
+        const streamUrl = await service.resolve(song);
+        const { filePath } = await downloadYouTube(streamUrl, MUSIC_DIR);
+        return { id: `playlist_${Date.now()}_${index}`, title: song.title, artist: song.artist, duration: song.duration || undefined, filePath, source: 'music-source', sourceUrl: streamUrl };
       };
-      // Download several tracks in parallel while preserving playlist order.
-      await Promise.all(Array.from({ length: Math.min(4, playlist.tracks.length) }, () => worker()));
-      if (!items.length) throw new Error('歌单中没有可播放的歌曲');
+      const preloadCount = Math.min(4, playlist.tracks.length);
+      // Prepare only the first track plus three look-ahead tracks before starting.
+      const firstBatch = await Promise.all(Array.from({ length: preloadCount }, (_, index) => downloadSong(index)));
       bot.queue.clear();
-      bot.queue.addMany(items);
+      bot.queue.addMany(firstBatch);
       bot.queue.playAt(0);
-      await bot.play(items[0]);
-      this.reply(bot, userClid, `已开始播放歌单「${playlist.title}」，共 ${items.length} 首`);
+      await bot.play(firstBatch[0]);
+      this.reply(bot, userClid, `已开始播放歌单「${playlist.title}」，已预载 ${firstBatch.length - 1} 首，共 ${playlist.tracks.length} 首`);
+
+      // Continue filling the queue in order while playback is running.
+      void (async () => {
+        try {
+          for (let start = preloadCount; start < playlist.tracks.length; start += 3) {
+            const batch = await Promise.all(
+              Array.from({ length: Math.min(3, playlist.tracks.length - start) }, (_, offset) => downloadSong(start + offset)),
+            );
+            bot.queue.addMany(batch);
+          }
+        } catch (error: any) {
+          console.error(`[MusicCmd] Playlist background preload failed: ${error.message}`);
+          this.reply(bot, userClid, `歌单后续歌曲预载失败：${error.message}`);
+        }
+      })();
     } catch (err: any) {
       this.reply(bot, userClid, `歌单播放失败：${err.message}`);
     }
