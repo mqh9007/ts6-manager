@@ -72,7 +72,7 @@ export default function Messages() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">{t('messages.title')}</h1>
-        <Button size="sm" onClick={() => setShowCompose(true)}><Plus className="h-4 w-4 mr-1" /> {t('messages.compose')}</Button>
+        <Button size="sm" onClick={() => setShowCompose(true)}><Plus className="h-4 w-4 mr-1" /> {t('messages.compose.tab')}</Button>
       </div>
 
       <DataTable columns={columns} data={messages} searchKey="subject" searchPlaceholder={t('messages.search')} />

@@ -166,7 +166,7 @@ export function VideoStreamTab({ botId, botStatus }: VideoStreamTabProps) {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label>{t('video.bitrate')}</Label>
+                    <Label>{t('video.bitrate.label')}</Label>
                     <Input
                       value={bitrate}
                       onChange={(e) => setBitrate(e.target.value)}
