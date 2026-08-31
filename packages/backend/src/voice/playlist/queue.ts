@@ -6,7 +6,7 @@ export interface QueueItem {
   artist?: string;
   duration?: number; // seconds
   filePath: string;
-  source: "local" | "youtube" | "url" | "radio" | "music-source";
+  source: "local" | "youtube" | "bilibili" | "url" | "radio" | "music-source";
   sourceUrl?: string;
   streamUrl?: string; // If set, play as live stream (radio) instead of file
 }

@@ -89,7 +89,7 @@ export function usePlayUrl() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ botId, url }: { botId: number; url: string }) =>
-      musicBotsApi.playUrl(botId, url),
+      musicBotsApi.playBilibili(botId, url),
     onSuccess: (_, { botId }) => qc.invalidateQueries({ queryKey: ['music-bot-state', botId] }),
   });
 }

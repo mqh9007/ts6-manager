@@ -2,7 +2,7 @@ import type { PrismaClient } from '../../generated/prisma/index.js';
 import { VoiceBotManager } from './voice-bot-manager.js';
 import type { VoiceBot } from './voice-bot.js';
 import type { QueueItem } from './playlist/queue.js';
-import { downloadYouTube } from './audio/youtube.js';
+import { downloadYouTube, downloadBilibili } from './audio/youtube.js';
 import { MusicSourceService } from './music-sources/music-source-service.js';
 import { config } from '../config.js';
 
@@ -10,7 +10,7 @@ const MUSIC_DIR = config.musicDir;
 const CMD_PREFIX = '!';
 
 const MUSIC_COMMANDS = new Set([
-  'radio', 'play', 'stop', 'pause', 'skip', 'next', 'prev',
+  'radio', 'play', 'bv', 'stop', 'pause', 'skip', 'next', 'prev',
   'vol', 'volume', 'np', 'nowplaying', 'queue', 'add',
   'stream', 'stopstream', 'viewers',
 ]);
@@ -75,6 +75,9 @@ export class MusicCommandHandler {
           break;
         case 'play':
           await this.handlePlay(botId, bot, userClid, args);
+          break;
+        case 'bv':
+          await this.handleBilibili(bot, userClid, args);
           break;
         case 'stop':
           this.handleStop(bot, userClid);
@@ -189,6 +192,11 @@ export class MusicCommandHandler {
       return;
     }
 
+    if (args.startsWith('http://') || args.startsWith('https://')) {
+      this.reply(bot, userClid, 'Use !bv <Bilibili BV link> for video links. !play is for music search.');
+      return;
+    }
+
     this.reply(bot, userClid, 'Loading...');
 
     try {
@@ -227,6 +235,20 @@ export class MusicCommandHandler {
       await this.enqueueOrPlay(bot, userClid, queueItem);
     } catch (err: any) {
       this.reply(bot, userClid, `Failed to play: ${err.message}`);
+    }
+  }
+
+  private async handleBilibili(bot: VoiceBot, userClid: number, args: string): Promise<void> {
+    if (!args) {
+      this.reply(bot, userClid, 'Usage: !bv <Bilibili BV link>');
+      return;
+    }
+    this.reply(bot, userClid, 'Loading Bilibili audio...');
+    try {
+      const { filePath, info } = await downloadBilibili(args, MUSIC_DIR);
+      await this.enqueueOrPlay(bot, userClid, { id: `bv_${info.id}`, title: info.title, artist: info.artist, duration: info.duration, filePath, source: 'bilibili', sourceUrl: args });
+    } catch (err: any) {
+      this.reply(bot, userClid, `Failed to play Bilibili link: ${err.message}`);
     }
   }
 

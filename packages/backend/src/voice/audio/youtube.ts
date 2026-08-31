@@ -132,6 +132,14 @@ export function downloadYouTube(url: string, outputDir: string): Promise<{ fileP
   });
 }
 
+/** Download audio from a Bilibili video URL using yt-dlp. */
+export function downloadBilibili(url: string, outputDir: string): Promise<{ filePath: string; info: YouTubeInfo }> {
+  if (!/^https?:\/\/(?:www\.)?(?:bilibili\.com\/video\/BV[\w]+|b23\.tv\/)[^\s]*$/i.test(url)) {
+    return Promise.reject(new Error('Only Bilibili BV links are supported (https://www.bilibili.com/video/BV...)'));
+  }
+  return downloadYouTube(url, outputDir);
+}
+
 /**
  * Get info about a YouTube URL (single video or playlist).
  * Returns type ('video' or 'playlist') and array of items.

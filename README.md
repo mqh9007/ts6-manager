@@ -17,7 +17,7 @@ Live overview of your server: online users, channel count, uptime, ping, bandwid
 ![Dashboard](docs/dashboard.png)
 
 ### Music Bots
-Run multiple music bots per server. Each bot has its own queue, volume control, and playback state. Supports radio streams, YouTube, and a local music library. Users in the bot's channel can control it via text commands (`!radio`, `!play`, `!vol`, etc.).
+Run multiple music bots per server. Each bot has its own queue, volume control, and playback state. Supports radio streams, Bilibili links, configured music sources, and a local music library. Users in the bot's channel can control it via text commands (`!radio`, `!bv`, `!play`, `!vol`, etc.).
 
 ![Music Bots](docs/musicbots.png)
 
@@ -51,7 +51,7 @@ Get started quickly with pre-built flow templates. Covers common use cases like 
 ### Music Bots
 - Multiple bots per server, each with independent queue and playback
 - Radio station streaming with ICY metadata and live title updates
-- YouTube playback via yt-dlp (search, download, queue)
+- Bilibili audio playback via yt-dlp (`!bv <link>`)
 - Music library management (upload, organize, playlists)
 - Volume control, pause, skip, previous, shuffle, repeat
 - Stereo audio support with stable 20ms pacing
@@ -263,7 +263,8 @@ When a music bot is connected to a channel, users in that channel can control it
 |---------|-------------|
 | `!radio` | List available radio stations |
 | `!radio <id>` | Play a radio station |
-| `!play <song name or url>` | Search and play a configured music source, or play from a YouTube URL |
+| `!bv <url>` | Play audio from a Bilibili BV/b23.tv link |
+| `!play <song name>` | Search and play a configured music source |
 | `!play` | Resume paused playback |
 | `!stop` | Stop playback |
 | `!pause` | Toggle pause/resume |

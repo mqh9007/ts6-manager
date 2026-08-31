@@ -1,13 +1,14 @@
 import { Router, Request, Response } from 'express';
 import { requireRole } from '../middleware/rbac.js';
 import { AppError } from '../middleware/error-handler.js';
+import { config } from '../config.js';
 import type { VoiceBotManager } from '../voice/voice-bot-manager.js';
-import { downloadYouTube } from '../voice/audio/youtube.js';
+import { downloadYouTube, downloadBilibili } from '../voice/audio/youtube.js';
 import { playerWidgetToken } from './widget-public.routes.js';
 
 export const musicBotRoutes: Router = Router();
 
-const MUSIC_DIR = process.env.MUSIC_DIR || '/data/music';
+const MUSIC_DIR = config.musicDir;
 
 // All routes require admin role
 musicBotRoutes.use(requireRole('admin'));
@@ -212,7 +213,7 @@ musicBotRoutes.post('/:id/play', async (req: Request, res: Response, next) => {
   } catch (err) { next(err); }
 });
 
-// POST /:id/play-url — Play a directly provided URL (e.g. from Music Requests History)
+// POST /:id/play-url — Play a directly provided Bilibili URL
 musicBotRoutes.post('/:id/play-url', async (req: Request, res: Response, next) => {
   try {
     const manager: VoiceBotManager = req.app.locals.voiceBotManager;
@@ -226,7 +227,7 @@ musicBotRoutes.post('/:id/play-url', async (req: Request, res: Response, next) =
       throw new AppError(400, 'Bot is not connected');
     }
 
-    const { filePath, info } = await downloadYouTube(url, MUSIC_DIR);
+    const { filePath, info } = await downloadBilibili(url, MUSIC_DIR);
 
     const queueItem = {
       id: `yt_${info.id}`,
@@ -234,7 +235,7 @@ musicBotRoutes.post('/:id/play-url', async (req: Request, res: Response, next) =
       artist: info.artist,
       duration: info.duration,
       filePath,
-      source: 'youtube' as const,
+      source: 'bilibili' as const,
       sourceUrl: url,
     };
 
