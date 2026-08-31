@@ -220,19 +220,7 @@ export class MusicCommandHandler {
         return;
       }
 
-      const { filePath, info } = await downloadYouTube(args, MUSIC_DIR);
-
-      const queueItem: QueueItem = {
-        id: `yt_${info.id}`,
-        title: info.title,
-        artist: info.artist,
-        duration: info.duration,
-        filePath,
-        source: 'youtube',
-        sourceUrl: args,
-      };
-
-      await this.enqueueOrPlay(bot, userClid, queueItem);
+      throw new Error('Use !bv <Bilibili BV link> for video links.');
     } catch (err: any) {
       this.reply(bot, userClid, `Failed to play: ${err.message}`);
     }
@@ -327,24 +315,24 @@ export class MusicCommandHandler {
       return;
     }
 
-    // URL provided — add to queue without interrupting
+    // Bilibili URL provided — add to queue without interrupting
     if (!args.startsWith('http://') && !args.startsWith('https://')) {
-      this.reply(bot, userClid, 'Usage: !queue [show|play <n>|remove <n>|clear|<url>]');
+      this.reply(bot, userClid, 'Usage: !queue [show|play <n>|remove <n>|clear|<Bilibili url>]');
       return;
     }
 
     this.reply(bot, userClid, 'Loading...');
 
     try {
-      const { filePath, info } = await downloadYouTube(args, MUSIC_DIR);
+      const { filePath, info } = await downloadBilibili(args, MUSIC_DIR);
 
       const queueItem: QueueItem = {
-        id: `yt_${info.id}`,
+        id: `bv_${info.id}`,
         title: info.title,
         artist: info.artist,
         duration: info.duration,
         filePath,
-        source: 'youtube',
+        source: 'bilibili',
         sourceUrl: args,
       };
 

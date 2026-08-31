@@ -764,7 +764,7 @@ function LibraryTab() {
         setYtResults(Array.isArray(data) ? data : data?.results || []);
         setShowYt(true);
       },
-      onError: () => toast.error('Bilibili link playback failed'),
+      onError: () => toast.error('YouTube search failed'),
     });
   };
 
@@ -851,7 +851,7 @@ function LibraryTab() {
         </Button>
       </div>
 
-      {/* Bilibili URL Paste */}
+      {/* YouTube URL / Playlist Paste */}
       <Card className="border-dashed">
         <CardContent className="p-3 space-y-3">
           <div className="flex items-center gap-2">
@@ -861,7 +861,7 @@ function LibraryTab() {
                 value={ytUrl}
                 onChange={(e) => setYtUrl(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleLoadUrl()}
-                placeholder="Paste Bilibili BV URL..."
+                placeholder="Paste YouTube URL or playlist..."
                 className="pl-9"
               />
             </div>
