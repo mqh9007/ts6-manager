@@ -40,7 +40,7 @@ import {
   Video, Settings as SettingsIcon,
 } from 'lucide-react';
 import { VideoStreamTab } from '@/components/video/VideoStreamTab';
-import { MusicSourcesTab } from '@/components/settings/MusicSourcesTab';
+import { MusicSourcesTab } from '@/components/music/MusicSourcesTab';
 import { toast } from 'sonner';
 import { formatBytes } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
