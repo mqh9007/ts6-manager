@@ -5,6 +5,8 @@ export function useMusicBots() {
   return useQuery({
     queryKey: ['music-bots'],
     queryFn: musicBotsApi.list,
+    refetchInterval: 1000,
+    refetchIntervalInBackground: true,
   });
 }
 
@@ -59,7 +61,7 @@ export function useStopMusicBot() {
   return useMutation({
     mutationFn: (id: number) => musicBotsApi.stop(id),
     onSuccess: (_, id) => {
-      qc.setQueryData<any[]>(['music-bots'], (bots) => Array.isArray(bots) ? bots.map((bot) => bot.id === id ? { ...bot, status: 'stopped' } : bot) : bots);
+      // The list query continuously follows the backend runtime status.
       qc.removeQueries({ queryKey: ['music-bot-state', id] });
       void qc.refetchQueries({ queryKey: ['music-bots'] });
     },
