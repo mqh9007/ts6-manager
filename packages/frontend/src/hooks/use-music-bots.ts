@@ -47,7 +47,10 @@ export function useStartMusicBot() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => musicBotsApi.start(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['music-bots'] }),
+    onSuccess: (_, id) => {
+      qc.setQueryData<any[]>(['music-bots'], (bots) => Array.isArray(bots) ? bots.map((bot) => bot.id === id ? { ...bot, status: 'connected' } : bot) : bots);
+      void qc.refetchQueries({ queryKey: ['music-bots'] });
+    },
   });
 }
 
@@ -55,7 +58,11 @@ export function useStopMusicBot() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => musicBotsApi.stop(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['music-bots'] }),
+    onSuccess: (_, id) => {
+      qc.setQueryData<any[]>(['music-bots'], (bots) => Array.isArray(bots) ? bots.map((bot) => bot.id === id ? { ...bot, status: 'stopped' } : bot) : bots);
+      qc.removeQueries({ queryKey: ['music-bot-state', id] });
+      void qc.refetchQueries({ queryKey: ['music-bots'] });
+    },
   });
 }
 
