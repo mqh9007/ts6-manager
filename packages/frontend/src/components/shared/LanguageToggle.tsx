@@ -21,8 +21,9 @@ export function LanguageToggle() {
           <span className="flex-1">{t('language.english')}</span>
           {locale === 'en' && <span className="text-xs text-primary">✓</span>}
         </DropdownMenuItem>
-        <DropdownMenuItem disabled>
-          <span className="flex-1 text-muted-foreground">中文（暂未翻译）</span>
+        <DropdownMenuItem onClick={() => setLocale('zh')} disabled={locale === 'zh'}>
+          <span className="flex-1">{t('language.chinese')}</span>
+          {locale === 'zh' && <span className="text-xs text-primary">✓</span>}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
