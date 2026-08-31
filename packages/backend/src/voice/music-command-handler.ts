@@ -252,20 +252,28 @@ export class MusicCommandHandler {
     try {
       const service = new MusicSourceService(this.prisma);
       const playlist = await service.playlist(args);
-      const items: QueueItem[] = [];
-      for (const [index, song] of playlist.tracks.entries()) {
-        const streamUrl = await service.resolve(song);
-        const { filePath } = await downloadYouTube(streamUrl, MUSIC_DIR);
-        items.push({
-          id: `playlist_${Date.now()}_${index}`,
-          title: song.title,
-          artist: song.artist,
-          duration: song.duration || undefined,
-          filePath,
-          source: 'music-source',
-          sourceUrl: streamUrl,
-        });
-      }
+      const items: QueueItem[] = new Array(playlist.tracks.length);
+      let nextIndex = 0;
+      const worker = async () => {
+        while (true) {
+          const index = nextIndex++;
+          if (index >= playlist.tracks.length) return;
+          const song = playlist.tracks[index];
+          const streamUrl = await service.resolve(song);
+          const { filePath } = await downloadYouTube(streamUrl, MUSIC_DIR);
+          items[index] = {
+            id: `playlist_${Date.now()}_${index}`,
+            title: song.title,
+            artist: song.artist,
+            duration: song.duration || undefined,
+            filePath,
+            source: 'music-source',
+            sourceUrl: streamUrl,
+          };
+        }
+      };
+      // Download several tracks in parallel while preserving playlist order.
+      await Promise.all(Array.from({ length: Math.min(4, playlist.tracks.length) }, () => worker()));
       if (!items.length) throw new Error('歌单中没有可播放的歌曲');
       bot.queue.clear();
       bot.queue.addMany(items);
