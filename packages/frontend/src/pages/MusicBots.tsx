@@ -91,6 +91,7 @@ function BotPlayerCard({ bot, onEdit, onDelete, onPlay }: {
 
   // Local drag state so sliders don't snap back during interaction
   const [draggingSeek, setDraggingSeek] = useState<number | null>(null);
+  const [hoverSeek, setHoverSeek] = useState<number | null>(null);
   const [draggingVolume, setDraggingVolume] = useState<number | null>(null);
 
   const isRunning = bot.status !== 'stopped' && bot.status !== 'error';
@@ -159,14 +160,32 @@ function BotPlayerCard({ bot, onEdit, onDelete, onPlay }: {
             {/* Progress bar (hidden for streams) */}
             {!isStreaming && (
               <div className="space-y-1">
-                <Slider
-                  value={[draggingSeek ?? state.position ?? 0]}
-                  max={state.duration || 1}
-                  step={1}
-                  onValueChange={([val]) => setDraggingSeek(val)}
-                  onValueCommit={([val]) => { seekMut.mutate({ botId: bot.id, seconds: val }); setDraggingSeek(null); }}
-                  className="cursor-pointer"
-                />
+                <div
+                  className="relative"
+                  onPointerMove={(event) => {
+                    const rect = event.currentTarget.getBoundingClientRect();
+                    const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+                    setHoverSeek(ratio * (state.duration || 0));
+                  }}
+                  onPointerLeave={() => setHoverSeek(null)}
+                >
+                  {hoverSeek !== null && state.duration > 0 && (
+                    <div
+                      className="pointer-events-none absolute bottom-full z-10 mb-1 -translate-x-1/2 rounded bg-popover px-1.5 py-0.5 text-[10px] text-popover-foreground shadow"
+                      style={{ left: `${Math.max(0, Math.min(100, (hoverSeek / state.duration) * 100))}%` }}
+                    >
+                      {formatTime(hoverSeek)}
+                    </div>
+                  )}
+                  <Slider
+                    value={[draggingSeek ?? state.position ?? 0]}
+                    max={state.duration || 1}
+                    step={1}
+                    onValueChange={([val]) => setDraggingSeek(val)}
+                    onValueCommit={([val]) => { seekMut.mutate({ botId: bot.id, seconds: val }); setDraggingSeek(null); }}
+                    className="cursor-pointer"
+                  />
+                </div>
                 <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                   <span>{formatTime(draggingSeek ?? state.position)}</span>
                   <span>{formatTime(state.duration)}</span>
