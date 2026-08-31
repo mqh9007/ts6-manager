@@ -2,13 +2,14 @@ import { Router, Request, Response } from 'express';
 import { requireRole } from '../middleware/rbac.js';
 import { AppError } from '../middleware/error-handler.js';
 import { downloadYouTube, searchYouTube, getYouTubeUrlInfo } from '../voice/audio/youtube.js';
+import { config } from '../config.js';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { spawn } from 'child_process';
 import { randomUUID } from 'crypto';
 
-const MUSIC_DIR = process.env.MUSIC_DIR || '/data/music';
+const MUSIC_DIR = config.musicDir;
 const ALLOWED_EXTENSIONS = ['.mp3', '.wav', '.flac', '.ogg', '.opus', '.m4a', '.aac', '.wma', '.webm'];
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 

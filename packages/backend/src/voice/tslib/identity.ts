@@ -2,7 +2,8 @@ import * as crypto from "crypto";
 import { Worker } from "worker_threads";
 import { fileURLToPath } from "url";
 import path from "path";
-import { sha1, xorInto } from "./crypto.js";
+import fs from "fs";
+import { sha1, xorInto } from "./crypto.ts";
 
 // Static obfuscation key used by TS3 identity export
 const OBFUSCATION_KEY = Buffer.from(
@@ -214,11 +215,13 @@ export function generateIdentity(securityLevel: number = 8): IdentityData {
 // Non-blocking identity generation using a Worker thread
 export function generateIdentityAsync(securityLevel: number = 8): Promise<IdentityData> {
   return new Promise((resolve, reject) => {
-    const workerPath = path.join(
-      path.dirname(fileURLToPath(import.meta.url)),
-      "identity-worker.js"
-    );
+    const workerDir = path.dirname(fileURLToPath(import.meta.url));
+    const tsWorkerPath = path.join(workerDir, "identity-worker.ts");
+    const jsWorkerPath = path.join(workerDir, "identity-worker.js");
+    const useTsWorker = fs.existsSync(tsWorkerPath) && !fs.existsSync(jsWorkerPath);
+    const workerPath = useTsWorker ? tsWorkerPath : jsWorkerPath;
     const worker = new Worker(workerPath, {
+      execArgv: useTsWorker ? ['--import', 'tsx'] : undefined,
       workerData: { securityLevel },
     });
     worker.on("message", (data) => {

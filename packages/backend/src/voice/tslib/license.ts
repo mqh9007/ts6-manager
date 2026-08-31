@@ -1,5 +1,5 @@
 import * as crypto from "crypto";
-import { sha512 } from "./crypto.js";
+import { sha512 } from "./crypto.ts";
 
 // We use libsodium-wrappers-sumo for Ed25519 point operations
 let sodium: any = null;
