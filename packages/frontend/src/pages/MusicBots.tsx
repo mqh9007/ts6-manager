@@ -1721,7 +1721,7 @@ export default function MusicBots() {
           <TabsTrigger value="library"><FileAudio className="h-3.5 w-3.5 mr-1.5" /> {t('music.bots.library')}</TabsTrigger>
           <TabsTrigger value="playlists"><ListMusic className="h-3.5 w-3.5 mr-1.5" /> {t('music.bots.playlists')}</TabsTrigger>
           <TabsTrigger value="radio"><Radio className="h-3.5 w-3.5 mr-1.5" /> {t('music.bots.radio')}</TabsTrigger>
-          {isAdmin && <TabsTrigger value="sources"><SettingsIcon className="h-3.5 w-3.5 mr-1.5" /> {t('music.bots.sources')}</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="sources"><SettingsIcon className="h-3.5 w-3.5 mr-1.5" /> {t('music.bots.sources.title')}</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="bots"><BotsTab /></TabsContent>

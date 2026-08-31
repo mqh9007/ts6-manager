@@ -13,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 
 export function MusicSourcesTab() {
-  const { t } = useTranslation();
+  const { t: translate } = useTranslation();
+  const t = (key: string, options?: Record<string, unknown>) => translate(key.replace('music.sources.', 'music.bots.sources.'), options);
   const qc = useQueryClient();
   const [deleteTarget, setDeleteTarget] = useState<MusicSourceConfig | null>(null);
   const [testResult, setTestResult] = useState<Record<string, { initialized: boolean; requests: { ok: boolean }[] }>>({});
