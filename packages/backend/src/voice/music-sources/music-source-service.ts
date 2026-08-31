@@ -117,10 +117,17 @@ function playlistId(url: string, pattern: RegExp): string | null {
 async function getNeteasePlaylist(url: string): Promise<MusicPlaylist> {
   const id = playlistId(url, /[#?&]id=(\d+)/i) || playlistId(url, /playlist[\\/]([0-9]+)/i);
   if (!id) throw new Error('网易云歌单链接中未找到歌单 ID');
-  const data = await fetchJson(`https://music.163.com/api/playlist/detail?id=${id}&n=1000&s=8`);
+  const data = await fetchJson(`https://music.163.com/api/v6/playlist/detail?id=${id}&n=1000&s=8`);
   const playlist = data?.playlist;
-  if (!playlist || !Array.isArray(playlist.tracks)) throw new Error('网易云歌单接口未返回完整歌曲列表');
-  const tracks = playlist.tracks.map((item: any) => ({
+  if (!playlist) throw new Error('网易云歌单接口未返回歌单信息');
+  let rawTracks = Array.isArray(playlist.tracks) ? playlist.tracks : [];
+  const trackIds = Array.isArray(playlist.trackIds) ? playlist.trackIds.map((item: any) => item.id).filter(Boolean) : [];
+  if (trackIds.length > rawTracks.length) {
+    const detail = await fetchJson(`https://music.163.com/api/song/detail?ids=${encodeURIComponent(JSON.stringify(trackIds))}`);
+    if (Array.isArray(detail?.songs)) rawTracks = detail.songs;
+  }
+  if (!rawTracks.length) throw new Error('网易云歌单未返回歌曲列表');
+  const tracks = rawTracks.map((item: any) => ({
     title: String(item.name || ''),
     artist: Array.isArray(item.ar) ? item.ar.map((artist: any) => artist.name).join('、') : 'Unknown',
     duration: Math.round(Number(item.dt || 0) / 1000),
