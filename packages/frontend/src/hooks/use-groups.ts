@@ -29,6 +29,15 @@ export function useServerGroupMembers(sgid: number | null) {
   });
 }
 
+export function useAddServerGroupMember() {
+  const qc = useQueryClient(); const { selectedConfigId: c, selectedSid: s } = useServerStore();
+  return useMutation({ mutationFn: ({ sgid, cldbid }: { sgid: number; cldbid: number }) => groupsApi.addServerGroupMember(c!, s!, sgid, cldbid), onSuccess: (_, { sgid }) => qc.invalidateQueries({ queryKey: ['server-group-members', c, s, sgid] }) });
+}
+export function useRemoveServerGroupMember() {
+  const qc = useQueryClient(); const { selectedConfigId: c, selectedSid: s } = useServerStore();
+  return useMutation({ mutationFn: ({ sgid, cldbid }: { sgid: number; cldbid: number }) => groupsApi.removeServerGroupMember(c!, s!, sgid, cldbid), onSuccess: (_, { sgid }) => qc.invalidateQueries({ queryKey: ['server-group-members', c, s, sgid] }) });
+}
+
 export function useCreateServerGroup() {
   const qc = useQueryClient();
   const { selectedConfigId: c, selectedSid: s } = useServerStore();
@@ -45,4 +54,21 @@ export function useDeleteServerGroup() {
     mutationFn: (sgid: number) => groupsApi.deleteServerGroup(c!, s!, sgid),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['server-groups'] }),
   });
+}
+
+export function useChannelGroupMembers(cgid: number | null, cid: number | null) {
+  const { selectedConfigId: c, selectedSid: s } = useServerStore();
+  return useQuery({ queryKey: ['channel-group-members', c, s, cgid, cid], queryFn: () => groupsApi.channelGroupMembers(c!, s!, cgid!, cid!), enabled: !!c && !!s && cgid !== null && cid !== null });
+}
+export function useCreateChannelGroup() {
+  const qc = useQueryClient(); const { selectedConfigId: c, selectedSid: s } = useServerStore();
+  return useMutation({ mutationFn: (name: string) => groupsApi.createChannelGroup(c!, s!, name), onSuccess: () => qc.invalidateQueries({ queryKey: ['channel-groups'] }) });
+}
+export function useAddChannelGroupMember() {
+  const qc = useQueryClient(); const { selectedConfigId: c, selectedSid: s } = useServerStore();
+  return useMutation({ mutationFn: ({ cgid, cldbid, cid }: { cgid: number; cldbid: number; cid: number }) => groupsApi.addChannelGroupMember(c!, s!, cgid, cldbid, cid), onSuccess: (_, { cgid, cid }) => qc.invalidateQueries({ queryKey: ['channel-group-members', c, s, cgid, cid] }) });
+}
+export function useRemoveChannelGroupMember() {
+  const qc = useQueryClient(); const { selectedConfigId: c, selectedSid: s } = useServerStore();
+  return useMutation({ mutationFn: ({ cgid, cldbid, cid }: { cgid: number; cldbid: number; cid: number }) => groupsApi.removeChannelGroupMember(c!, s!, cgid, cldbid, cid), onSuccess: (_, { cgid, cid }) => qc.invalidateQueries({ queryKey: ['channel-group-members', c, s, cgid, cid] }) });
 }

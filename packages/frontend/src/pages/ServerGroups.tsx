@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useServerGroups, useServerGroupMembers, useCreateServerGroup, useDeleteServerGroup } from '@/hooks/use-groups';
+import { useServerGroups, useServerGroupMembers, useCreateServerGroup, useDeleteServerGroup, useAddServerGroupMember, useRemoveServerGroupMember } from '@/hooks/use-groups';
+import { useClientDatabase, useClients } from '@/hooks/use-clients';
 import { useServerStore } from '@/stores/server.store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,7 @@ import { PageLoader } from '@/components/shared/LoadingSpinner';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { Shield, Plus, Trash2, Users, ChevronRight } from 'lucide-react';
+import { Shield, Plus, Trash2, Users, ChevronRight, UserPlus, UserMinus } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ServerGroups() {
@@ -22,6 +23,10 @@ export default function ServerGroups() {
   const { data, isLoading } = useServerGroups();
   const createGroup = useCreateServerGroup();
   const deleteGroup = useDeleteServerGroup();
+  const addMember = useAddServerGroupMember(); const removeMember = useRemoveServerGroupMember();
+  const { data: databaseClients } = useClientDatabase(); const { data: onlineClients } = useClients();
+  const [showAddMembers, setShowAddMembers] = useState(false);
+  const [selectedMembers, setSelectedMembers] = useState<number[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<number | null>(null);
   const { data: members } = useServerGroupMembers(selectedGroup);
   const [showCreate, setShowCreate] = useState(false);
@@ -31,7 +36,14 @@ export default function ServerGroups() {
   if (!selectedConfigId || !selectedSid) return <EmptyState icon={Shield} title={t('groups.server.noServer')} />;
   if (isLoading) return <PageLoader />;
 
-  const groups = Array.isArray(data) ? data : [];
+  // Type 0 groups are built-in templates; only show manageable groups.
+  const groups = (Array.isArray(data) ? data : []).filter((g: any) => Number(g.type) !== 0);
+  const onlineDbids = new Set((Array.isArray(onlineClients) ? onlineClients : []).map((c: any) => Number(c.client_database_id || c.cldbid)));
+  const databaseClientList = Array.isArray(databaseClients)
+    ? databaseClients
+    : (databaseClients as any)?.clients || (databaseClients as any)?.clientdb || (databaseClients as any)?.client_database || [];
+  const availableClients = (Array.isArray(databaseClientList) ? databaseClientList : []).slice().sort((a: any, b: any) => Number(onlineDbids.has(Number(b.cldbid))) - Number(onlineDbids.has(Number(a.cldbid))));
+  const memberIds = new Set((Array.isArray(members) ? members : []).map((m: any) => Number(m.cldbid)));
 
   return (
     <div className="space-y-5">
@@ -88,12 +100,12 @@ export default function ServerGroups() {
                 {selectedGroup && <Badge variant="default" className="font-mono-data text-[10px]">{t('groups.server.sgid', { id: selectedGroup })}</Badge>}
               </CardTitle>
               {selectedGroup && (
-                <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => {
+                <div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => { setSelectedMembers([]); setShowAddMembers(true); }}><UserPlus className="h-3 w-3 mr-1" />{t('groups.server.addMembers')}</Button><Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => {
                   const g = groups.find((g: any) => g.sgid === selectedGroup);
                   if (g) setDeleteTarget({ sgid: g.sgid, name: g.name });
                 }}>
                   <Trash2 className="h-3 w-3 mr-1" /> {t('groups.server.deleteGroup')}
-                </Button>
+                </Button></div>
               )}
             </div>
           </CardHeader>
@@ -112,7 +124,7 @@ export default function ServerGroups() {
                           </div>
                           <span className="text-sm">{m.client_nickname || t('groups.server.dbid', { id: m.cldbid })}</span>
                         </div>
-                        <span className="text-xs text-muted-foreground font-mono-data">{t('groups.server.dbid', { id: m.cldbid })}</span>
+                        <div className="flex items-center gap-2"><span className="text-xs text-muted-foreground font-mono-data">{t('groups.server.dbid', { id: m.cldbid })}</span><Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" aria-label={t('groups.server.removeMember')} onClick={() => removeMember.mutate({ sgid: selectedGroup!, cldbid: Number(m.cldbid) })}><UserMinus className="h-3 w-3" /></Button></div>
                       </div>
                     ))
                   ) : (
@@ -124,6 +136,13 @@ export default function ServerGroups() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={showAddMembers} onOpenChange={setShowAddMembers}>
+        <DialogContent><DialogHeader><DialogTitle>{t('groups.server.addMembers')}</DialogTitle></DialogHeader>
+          <ScrollArea className="max-h-80 pr-2"><div className="space-y-1.5">{availableClients.filter((c: any) => !memberIds.has(Number(c.cldbid))).map((c: any) => { const id = Number(c.cldbid); const online = onlineDbids.has(id); const checked = selectedMembers.includes(id); return <label key={id} className={`flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors ${checked ? 'border-primary/40 bg-primary/5' : 'border-transparent bg-muted/20 hover:border-border hover:bg-muted/50'}`}><input className="h-4 w-4 accent-primary" type="checkbox" checked={checked} onChange={(e) => setSelectedMembers((current) => e.target.checked ? [...current, id] : current.filter((value) => value !== id))} /><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">{(c.client_nickname || String(id)).slice(0, 1).toUpperCase()}</span><span className="min-w-0 flex-1 truncate text-sm font-medium">{c.client_nickname || id}</span><span className={`text-xs ${online ? 'text-emerald-600' : 'text-muted-foreground'}`}>{online ? `● ${t('groups.server.online')}` : `#${id}`}</span></label>; })}</div></ScrollArea>
+          <DialogFooter><Button variant="outline" onClick={() => setShowAddMembers(false)}>{t('common.cancel')}</Button><Button disabled={selectedMembers.length === 0 || addMember.isPending} onClick={() => { selectedMembers.forEach((cldbid) => addMember.mutate({ sgid: selectedGroup!, cldbid })); setSelectedMembers([]); setShowAddMembers(false); }}>{t('groups.server.addMembers')}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
         <DialogContent>

@@ -259,11 +259,11 @@ export default function Permissions() {
   const entities = (() => {
     switch (layer) {
       case 'server-group':
-        return (Array.isArray(serverGroups) ? serverGroups : []).map((g: any) => ({
+        return (Array.isArray(serverGroups) ? serverGroups : []).filter((g: any) => Number(g.type) !== 0).map((g: any) => ({
           id: Number(g.sgid), name: g.name, type: Number(g.type),
         }));
       case 'channel-group':
-        return (Array.isArray(channelGroups) ? channelGroups : []).map((g: any) => ({
+        return (Array.isArray(channelGroups) ? channelGroups : []).filter((g: any) => Number(g.type) !== 0).map((g: any) => ({
           id: Number(g.cgid), name: g.name, type: Number(g.type),
         }));
       case 'channel':

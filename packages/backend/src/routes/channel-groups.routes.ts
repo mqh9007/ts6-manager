@@ -32,7 +32,11 @@ channelGroupRoutes.delete('/:cgid', requireRole('admin'), async (req: Request, r
 
 channelGroupRoutes.get('/:cgid/clients', async (req: Request, res: Response, next) => {
   try {
-    res.json(await getClient(req).execute(getSid(req), 'channelgroupclientlist', { cgid: String(req.params.cgid) }));
+    res.json(await getClient(req).execute(getSid(req), 'channelgroupclientlist', {
+      cgid: String(req.params.cgid),
+      cid: String(req.query.cid ?? 0),
+      '-names': '',
+    }));
   } catch (err) { next(err); }
 });
 
