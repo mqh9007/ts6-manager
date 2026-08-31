@@ -10,7 +10,7 @@ const MUSIC_DIR = config.musicDir;
 const CMD_PREFIX = '!';
 
 const MUSIC_COMMANDS = new Set([
-  'radio', 'play', 'bv', 'stop', 'pause', 'skip', 'next', 'prev',
+  'radio', 'play', 'bv', 'playlist', 'stop', 'pause', 'skip', 'next', 'prev',
   'vol', 'volume', 'np', 'nowplaying', 'queue', 'add',
   'stream', 'stopstream', 'viewers',
 ]);
@@ -78,6 +78,9 @@ export class MusicCommandHandler {
           break;
         case 'bv':
           await this.handleBilibili(bot, userClid, args);
+          break;
+        case 'playlist':
+          await this.handlePlaylist(bot, userClid, args);
           break;
         case 'stop':
           this.handleStop(bot, userClid);
@@ -237,6 +240,40 @@ export class MusicCommandHandler {
       await this.enqueueOrPlay(bot, userClid, { id: `bv_${info.id}`, title: info.title, artist: info.artist, duration: info.duration, filePath, source: 'bilibili', sourceUrl: args });
     } catch (err: any) {
       this.reply(bot, userClid, `Failed to play Bilibili link: ${err.message}`);
+    }
+  }
+
+  private async handlePlaylist(bot: VoiceBot, userClid: number, args: string): Promise<void> {
+    if (!args || !/^https?:\/\//i.test(args)) {
+      this.reply(bot, userClid, 'Usage: !playlist <网易云或酷我歌单链接>');
+      return;
+    }
+    this.reply(bot, userClid, '正在解析歌单，请稍候...');
+    try {
+      const service = new MusicSourceService(this.prisma);
+      const playlist = await service.playlist(args);
+      const items: QueueItem[] = [];
+      for (const [index, song] of playlist.tracks.entries()) {
+        const streamUrl = await service.resolve(song);
+        const { filePath } = await downloadYouTube(streamUrl, MUSIC_DIR);
+        items.push({
+          id: `playlist_${Date.now()}_${index}`,
+          title: song.title,
+          artist: song.artist,
+          duration: song.duration || undefined,
+          filePath,
+          source: 'music-source',
+          sourceUrl: streamUrl,
+        });
+      }
+      if (!items.length) throw new Error('歌单中没有可播放的歌曲');
+      bot.queue.clear();
+      bot.queue.addMany(items);
+      bot.queue.playAt(0);
+      await bot.play(items[0]);
+      this.reply(bot, userClid, `已开始播放歌单「${playlist.title}」，共 ${items.length} 首`);
+    } catch (err: any) {
+      this.reply(bot, userClid, `歌单播放失败：${err.message}`);
     }
   }
 

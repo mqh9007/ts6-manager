@@ -18,6 +18,12 @@ export type MusicSearchResult = {
   musicInfo: Record<string, unknown>;
 };
 
+export type MusicPlaylist = {
+  title: string;
+  platform: MusicSearchResult['platform'];
+  tracks: MusicSearchResult[];
+};
+
 async function fetchJson(url: string): Promise<any> {
   return fetchJsonWithHeaders(url);
 }
@@ -104,6 +110,44 @@ async function searchNetease(query: string): Promise<MusicSearchResult[]> {
   } finally { clearTimeout(timer); }
 }
 
+function playlistId(url: string, pattern: RegExp): string | null {
+  return url.match(pattern)?.[1] || null;
+}
+
+async function getNeteasePlaylist(url: string): Promise<MusicPlaylist> {
+  const id = playlistId(url, /[#?&]id=(\d+)/i) || playlistId(url, /playlist[\\/]([0-9]+)/i);
+  if (!id) throw new Error('网易云歌单链接中未找到歌单 ID');
+  const data = await fetchJson(`https://music.163.com/api/playlist/detail?id=${id}&n=1000&s=8`);
+  const playlist = data?.playlist;
+  if (!playlist || !Array.isArray(playlist.tracks)) throw new Error('网易云歌单接口未返回完整歌曲列表');
+  const tracks = playlist.tracks.map((item: any) => ({
+    title: String(item.name || ''),
+    artist: Array.isArray(item.ar) ? item.ar.map((artist: any) => artist.name).join('、') : 'Unknown',
+    duration: Math.round(Number(item.dt || 0) / 1000),
+    platform: 'wy' as const,
+    musicInfo: { name: item.name, singer: Array.isArray(item.ar) ? item.ar.map((artist: any) => artist.name).join('、') : '', songmid: item.id, albumName: item.al?.name || '', albumId: item.al?.id || '', interval: Math.round(Number(item.dt || 0) / 1000) },
+  })).filter((item: MusicSearchResult) => item.title && item.musicInfo.songmid);
+  if (!tracks.length) throw new Error('网易云歌单为空或歌曲列表不可用');
+  return { title: String(playlist.name || '网易云歌单'), platform: 'wy', tracks };
+}
+
+async function getKuwoPlaylist(url: string): Promise<MusicPlaylist> {
+  const id = playlistId(url, /(?:playlist|list)[\\/]?(\d+)/i) || playlistId(url, /[?&](?:pid|id)=(\d+)/i);
+  if (!id) throw new Error('酷我歌单链接中未找到歌单 ID');
+  const data = await fetchJson(`https://www.kuwo.cn/api/www/playlist/playpage?pid=${id}&pn=1&rn=1000&httpsStatus=1`);
+  const raw = data?.data?.musicList || data?.data?.musiclist;
+  if (!Array.isArray(raw)) throw new Error('酷我歌单接口未返回完整歌曲列表');
+  const tracks = raw.map((item: any) => ({
+    title: String(item.name || item.songName || ''),
+    artist: String(item.artist || item.artistName || 'Unknown'),
+    duration: Number(item.duration || item.songDuration || 0),
+    platform: 'kw' as const,
+    musicInfo: { name: item.name || item.songName, singer: item.artist || item.artistName, songmid: String(item.rid || item.musicRid || item.id || ''), albumName: item.album || item.albumName || '', albumId: item.albumid || '', interval: item.duration || item.songDuration },
+  })).filter((item: MusicSearchResult) => item.title && item.musicInfo.songmid);
+  if (!tracks.length) throw new Error('酷我歌单为空或歌曲列表不可用');
+  return { title: '酷我歌单', platform: 'kw', tracks };
+}
+
 export class MusicSourceService {
   constructor(private prisma: PrismaClient) {}
 
@@ -146,6 +190,13 @@ export class MusicSourceService {
       } catch (error: any) { lastError = error; }
     }
     throw lastError || new Error('No enabled music source supports the selected platform');
+  }
+
+  async playlist(url: string): Promise<MusicPlaylist> {
+    const normalized = url.trim();
+    if (/music\.163\.com/i.test(normalized)) return getNeteasePlaylist(normalized);
+    if (/kuwo\.cn/i.test(normalized)) return getKuwoPlaylist(normalized);
+    throw new Error('暂不支持该歌单平台。当前支持网易云歌单和酷我歌单，且无需 Cookie。');
   }
 
   private async getSettings(): Promise<SavedSettings> {
