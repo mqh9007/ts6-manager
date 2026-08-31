@@ -260,21 +260,27 @@ export class MusicCommandHandler {
       };
       const preloadCount = Math.min(4, playlist.tracks.length);
       // Prepare only the first track plus three look-ahead tracks before starting.
-      const firstBatch = await Promise.all(Array.from({ length: preloadCount }, (_, index) => downloadSong(index)));
+      const firstResults = await Promise.allSettled(Array.from({ length: preloadCount }, (_, index) => downloadSong(index)));
+      const firstBatch = firstResults.flatMap((result) => result.status === 'fulfilled' ? [result.value] : []);
+      if (!firstBatch.length) throw new Error('歌单前几首歌曲均无法获取音频');
+      const firstSkipped = firstResults.length - firstBatch.length;
       bot.queue.clear();
       bot.queue.addMany(firstBatch);
       bot.queue.playAt(0);
       await bot.play(firstBatch[0]);
-      this.reply(bot, userClid, `已开始播放歌单「${playlist.title}」，已预载 ${firstBatch.length - 1} 首，共 ${playlist.tracks.length} 首`);
+      this.reply(bot, userClid, `已开始播放歌单「${playlist.title}」，已预载 ${firstBatch.length - 1} 首，共 ${playlist.tracks.length} 首${firstSkipped ? `，已跳过 ${firstSkipped} 首不可用歌曲` : ''}`);
 
       // Continue filling the queue in order while playback is running.
       void (async () => {
         try {
           for (let start = preloadCount; start < playlist.tracks.length; start += 3) {
-            const batch = await Promise.all(
+            const results = await Promise.allSettled(
               Array.from({ length: Math.min(3, playlist.tracks.length - start) }, (_, offset) => downloadSong(start + offset)),
             );
+            const batch = results.flatMap((result) => result.status === 'fulfilled' ? [result.value] : []);
             bot.queue.addMany(batch);
+            const skipped = results.length - batch.length;
+            if (skipped) this.reply(bot, userClid, `歌单预载：跳过 ${skipped} 首无法获取音频的歌曲，继续播放后续歌曲`);
           }
         } catch (error: any) {
           console.error(`[MusicCmd] Playlist background preload failed: ${error.message}`);
