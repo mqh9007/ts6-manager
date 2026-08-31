@@ -5,6 +5,8 @@ WORKDIR /app
 
 # Copy everything at once to avoid BuildKit ordering bug on Windows
 FROM base AS build
+ARG APP_VERSION=dev
+ENV VITE_APP_VERSION=${APP_VERSION}
 COPY . .
 RUN pnpm install --no-frozen-lockfile
 RUN pnpm --filter @ts6/common run build

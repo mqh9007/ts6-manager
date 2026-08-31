@@ -17,7 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
-import { Users, Server, Plus, Trash2, Pencil, TestTube, Check, X, Lock, KeyRound, Youtube, Upload, FileText } from 'lucide-react';
+import { Users, Server, Plus, Trash2, Pencil, TestTube, Check, X, Lock, KeyRound, Youtube, Upload, FileText, Info } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Settings() {
@@ -35,6 +35,7 @@ export default function Settings() {
           <TabsTrigger value="account"><Lock className="h-3.5 w-3.5 mr-1" /> {t('settings.tabs.account')}</TabsTrigger>
           {isAdmin && <TabsTrigger value="users"><Users className="h-3.5 w-3.5 mr-1" /> {t('settings.tabs.users')}</TabsTrigger>}
           {isAdmin && <TabsTrigger value="youtube"><Youtube className="h-3.5 w-3.5 mr-1" /> {t('settings.tabs.youtube')}</TabsTrigger>}
+          <TabsTrigger value="about"><Info className="h-3.5 w-3.5 mr-1" /> {t('settings.tabs.about')}</TabsTrigger>
         </TabsList>
 
         {isAdmin && (
@@ -42,6 +43,10 @@ export default function Settings() {
             <ConnectionsTab />
           </TabsContent>
         )}
+
+        <TabsContent value="about" className="mt-4">
+          <AboutTab />
+        </TabsContent>
 
         <TabsContent value="account" className="mt-4">
           <AccountTab />
@@ -62,6 +67,12 @@ export default function Settings() {
       </Tabs>
     </div>
   );
+}
+
+function AboutTab() {
+  const { t } = useTranslation();
+  const version = import.meta.env.VITE_APP_VERSION || 'dev';
+  return <Card className="max-w-md"><CardHeader><CardTitle className="flex items-center gap-2 text-sm font-medium"><Info className="h-4 w-4 text-primary" />{t('settings.about.title')}</CardTitle></CardHeader><CardContent><div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">{t('settings.about.version')}</span><Badge variant="secondary" className="font-mono-data">{version}</Badge></div></CardContent></Card>;
 }
 
 function AccountTab() {
