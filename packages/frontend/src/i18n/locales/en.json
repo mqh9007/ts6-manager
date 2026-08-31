@@ -72,7 +72,12 @@
   "channels": {
     "client": {
       "away": "Away",
-      "muted": "Muted"
+      "muted": "Muted",
+      "active": "Active",
+      "micMuted": "Mic muted",
+      "speakerMuted": "Speaker muted"
+      ,"speakerMicMuted": "Speaker muted / Mic muted"
+      ,"speakerAway": "Speaker muted / Away"
     },
     "create": "Create Channel",
     "delete": {
@@ -114,6 +119,7 @@
     "banned": "Banned {{name}}",
     "col": {
       "country": "Country",
+      "ip": "IP Address",
       "idle": "Idle",
       "nickname": "Nickname",
       "status": "Status"
@@ -134,8 +140,14 @@
     "status": {
       "active": "Active",
       "away": "Away",
-      "muted": "Muted"
+      "muted": "Muted",
+      "micMuted": "Mic muted",
+      "speakerMuted": "Speaker muted"
+      ,"speakerMicMuted": "Speaker muted / Mic muted"
+      ,"speakerAway": "Speaker muted / Away"
     },
+    "copyIp": "Copy IP address",
+    "ipCopied": "IP address copied",
     "title": "Clients"
   },
   "groups": {

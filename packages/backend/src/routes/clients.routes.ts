@@ -15,7 +15,7 @@ clientRoutes.get('/', async (req: Request, res: Response, next) => {
   try {
     // M2: Only include -ip flag for admin users
     const flags: Record<string, string> = {
-      '-uid': '', '-away': '', '-voice': '', '-times': '', '-groups': '', '-info': '', '-country': '',
+      '-uid': '', '-away': '', '-voice': '', '-times': '', '-groups': '', '-info': '', '-country': '', '-badges': '',
     };
     if (req.user?.role === 'admin') {
       flags['-ip'] = '';

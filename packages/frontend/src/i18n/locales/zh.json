@@ -72,7 +72,12 @@
   "channels": {
     "client": {
       "away": "离开",
-      "muted": "已静音"
+      "muted": "已静音",
+      "active": "活跃",
+      "micMuted": "麦克风静音",
+      "speakerMuted": "扬声器静音"
+      ,"speakerMicMuted": "扬声器静音 / 麦克风静音"
+      ,"speakerAway": "扬声器静音 / 离开"
     },
     "create": "创建频道",
     "delete": {
@@ -114,6 +119,7 @@
     "banned": "已封禁 {{name}}",
     "col": {
       "country": "国家/地区",
+      "ip": "IP 地址",
       "idle": "空闲",
       "nickname": "昵称",
       "status": "状态"
@@ -134,8 +140,14 @@
     "status": {
       "active": "活跃",
       "away": "离开",
-      "muted": "已静音"
+      "muted": "已静音",
+      "micMuted": "麦克风静音",
+      "speakerMuted": "扬声器静音"
+      ,"speakerMicMuted": "扬声器静音 / 麦克风静音"
+      ,"speakerAway": "扬声器静音 / 离开"
     },
+    "copyIp": "复制 IP 地址",
+    "ipCopied": "IP 地址已复制",
     "title": "客户端"
   },
   "groups": {
@@ -303,7 +315,7 @@
     "errorGeneric": "加载文件失败。请确保已在服务器设置中配置 SSH 凭据。",
     "errorSsh": "无法通过 SSH 连接到 TeamSpeak 服务器。请检查服务器设置中的 SSH 凭据和端口。",
     "errorSshCredentials": "文件浏览需要 SSH 访问，因为 TeamSpeak WebQuery HTTP API 不支持文件传输命令。请在服务器设置中配置 SSH 凭据（用户名和密码）。",
-    "infoNotice": "文件上传/下载无法通过 WebQuery API 使用。请使用 TS3 客户端进行文件传输。",
+    "infoNotice": "文件上传/下载无法通过 WebQuery API 使用。请使用TeamSpeak客户端进行文件传输。",
     "itemCount": "{{count}} 个项目",
     "mkdir": {
       "create": "创建",

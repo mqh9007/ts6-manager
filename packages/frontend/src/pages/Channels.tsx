@@ -37,6 +37,7 @@ interface ClientInfo {
   client_type: string;
   client_away: number;
   client_input_muted: number;
+  client_output_muted: number;
 }
 
 function buildTree(channels: any[]): ChannelNode[] {
@@ -72,8 +73,7 @@ function ClientEntry({ client, depth }: { client: ClientInfo; depth: number }) {
         {client.client_nickname?.[0]?.toUpperCase() || '?'}
       </div>
       <span className="truncate">{client.client_nickname}</span>
-      {client.client_away === 1 && <Badge variant="warning" className="text-[8px] px-1 py-0 h-3.5">{t('channels.client.away')}</Badge>}
-      {client.client_input_muted === 1 && !client.client_away && <Badge variant="secondary" className="text-[8px] px-1 py-0 h-3.5">{t('channels.client.muted')}</Badge>}
+      {client.client_output_muted === 1 && client.client_away === 1 ? <Badge className="bg-orange-500/15 text-orange-700 text-[8px] px-1 py-0 h-3.5">{t('channels.client.speakerAway')}</Badge> : client.client_output_muted === 1 && client.client_input_muted === 1 ? <Badge className="bg-orange-500/15 text-orange-700 text-[8px] px-1 py-0 h-3.5">{t('channels.client.speakerMicMuted')}</Badge> : client.client_output_muted === 1 ? <Badge className="bg-orange-500/15 text-orange-700 text-[8px] px-1 py-0 h-3.5">{t('channels.client.speakerMuted')}</Badge> : client.client_away === 1 ? <Badge variant="warning" className="text-[8px] px-1 py-0 h-3.5">{t('channels.client.away')}</Badge> : client.client_input_muted === 1 ? <Badge variant="secondary" className="text-[8px] px-1 py-0 h-3.5">{t('channels.client.micMuted')}</Badge> : <Badge className="bg-emerald-500/15 text-emerald-700 text-[8px] px-1 py-0 h-3.5">{t('channels.client.active')}</Badge>}
     </div>
   );
 }
@@ -255,6 +255,7 @@ export default function Channels() {
         client_type: String(c.client_type),
         client_away: Number(c.client_away) || 0,
         client_input_muted: Number(c.client_input_muted) || 0,
+        client_output_muted: Number(c.client_output_muted) || 0,
       };
       if (!map.has(cid)) map.set(cid, []);
       map.get(cid)!.push(entry);

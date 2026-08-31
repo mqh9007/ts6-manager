@@ -12,7 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { PageLoader } from '@/components/shared/LoadingSpinner';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { formatUptime } from '@/lib/utils';
-import { Users, MoreHorizontal, LogOut, Ban, MessageSquare, Zap } from 'lucide-react';
+import { Users, MoreHorizontal, LogOut, Ban, MessageSquare, Zap, Copy } from 'lucide-react';
 import { type ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
@@ -25,6 +25,7 @@ export default function Clients() {
   const kickClient = useKickClient();
   const banClient = useBanClient();
   const pokeClient = usePokeClient();
+  const copyIp = (ip: string) => { void navigator.clipboard.writeText(ip).then(() => toast.success(t('clients.ipCopied'))); };
 
   const [pokeTarget, setPokeTarget] = useState<{ clid: number; name: string } | null>(null);
   const [pokeMsg, setPokeMsg] = useState('');
@@ -53,6 +54,14 @@ export default function Clients() {
         header: t('clients.col.country'),
         cell: ({ getValue }) => <span className="font-mono-data text-xs">{(getValue() as string) || '-'}</span>,
       },
+      ...(isAdmin ? [{
+        accessorKey: 'connection_client_ip',
+        header: t('clients.col.ip'),
+        cell: ({ row }: any) => {
+          const ip = row.original.connection_client_ip || '-';
+          return <div className="flex items-center gap-1 font-mono-data text-xs"><span>{ip}</span>{ip !== '-' && <Button variant="ghost" size="icon" className="h-6 w-6" aria-label={t('clients.copyIp')} onClick={() => copyIp(ip)}><Copy className="h-3 w-3" /></Button>}</div>;
+        },
+      }] : []),
       {
         accessorKey: 'client_idle_time',
         header: t('clients.col.idle'),
@@ -62,8 +71,11 @@ export default function Clients() {
         accessorKey: 'client_away',
         header: t('clients.col.status'),
         cell: ({ row }) => {
-          if (row.original.client_away) return <Badge variant="warning" className="text-[10px]">{t('clients.status.away')}</Badge>;
-          if (row.original.client_input_muted) return <Badge variant="secondary" className="text-[10px]">{t('clients.status.muted')}</Badge>;
+          if (Number(row.original.client_output_muted) && Number(row.original.client_away)) return <Badge className="bg-orange-500/15 text-orange-700 text-[10px]">{t('clients.status.speakerAway')}</Badge>;
+          if (Number(row.original.client_output_muted) && Number(row.original.client_input_muted)) return <Badge className="bg-orange-500/15 text-orange-700 text-[10px]">{t('clients.status.speakerMicMuted')}</Badge>;
+          if (Number(row.original.client_output_muted)) return <Badge className="bg-orange-500/15 text-orange-700 text-[10px]">{t('clients.status.speakerMuted')}</Badge>;
+          if (Number(row.original.client_away)) return <Badge variant="warning" className="text-[10px]">{t('clients.status.away')}</Badge>;
+          if (Number(row.original.client_input_muted)) return <Badge variant="secondary" className="text-[10px]">{t('clients.status.micMuted')}</Badge>;
           return <Badge variant="success" className="text-[10px]">{t('clients.status.active')}</Badge>;
         },
       },
