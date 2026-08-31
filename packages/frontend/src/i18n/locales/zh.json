@@ -352,6 +352,7 @@
   "complaints": {
     "col": {
       "from": "来自",
+      "to": "投诉对象", 
       "message": "消息",
       "when": "时间"
     },
@@ -367,7 +368,7 @@
       "subject": "主题"
     },
     "compose": {
-      "tab": "撰写",
+      "tab": "新建消息",
       "cancel": "取消",
       "message": "消息",
       "messagePlaceholder": "消息内容...",
@@ -376,7 +377,7 @@
       "send": "发送",
       "subject": "主题",
       "subjectPlaceholder": "消息主题",
-      "title": "撰写消息"
+      "title": "新建消息"
     },
     "deleted": "消息已删除",
     "noServer": "未选择服务器",
@@ -698,7 +699,7 @@
       "emptyTitle": "暂无音乐请求",
       "noServer": "未选择服务器",
       "requested": "已请求",
-      "subtitle": "通过此服务器上的 <code class=\"text-xs bg-muted px-1 rounded text-primary\">!play</code> 命令请求的歌曲历史记录。",
+      "subtitle": "通过此服务器上的 !play 命令请求的歌曲历史记录。",
       "title": "音乐请求历史"
     }
   },

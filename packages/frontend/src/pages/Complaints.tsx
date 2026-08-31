@@ -18,7 +18,7 @@ export default function Complaints() {
   const complaints = useMemo(() => (Array.isArray(data) ? data : []), [data]);
   const columns: ColumnDef<any>[] = useMemo(() => [
     { accessorKey: 'fname', header: t('complaints.col.from') },
-    { accessorKey: 'tname', header: t('complaints.col.about') },
+    { accessorKey: 'tname', header: t('complaints.col.to') },
     { accessorKey: 'message', header: t('complaints.col.message') },
     { accessorKey: 'timestamp', header: t('complaints.col.when'), cell: ({ getValue }) => <span className="text-xs text-muted-foreground">{timeAgo(getValue() as number)}</span> },
   ], [t]);
