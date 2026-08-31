@@ -17,9 +17,8 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
-import { Settings as SettingsIcon, Users, Server, Plus, Trash2, Pencil, TestTube, Check, X, Lock, KeyRound, Youtube, Upload, FileText } from 'lucide-react';
+import { Users, Server, Plus, Trash2, Pencil, TestTube, Check, X, Lock, KeyRound, Youtube, Upload, FileText } from 'lucide-react';
 import { toast } from 'sonner';
-import { MusicSourcesTab } from '@/components/settings/MusicSourcesTab';
 
 export default function Settings() {
   const { user } = useAuthStore();
@@ -36,7 +35,6 @@ export default function Settings() {
           <TabsTrigger value="account"><Lock className="h-3.5 w-3.5 mr-1" /> {t('settings.tabs.account')}</TabsTrigger>
           {isAdmin && <TabsTrigger value="users"><Users className="h-3.5 w-3.5 mr-1" /> {t('settings.tabs.users')}</TabsTrigger>}
           {isAdmin && <TabsTrigger value="youtube"><Youtube className="h-3.5 w-3.5 mr-1" /> {t('settings.tabs.youtube')}</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="music-sources"><SettingsIcon className="h-3.5 w-3.5 mr-1" /> {t('settings.tabs.musicSources')}</TabsTrigger>}
         </TabsList>
 
         {isAdmin && (
@@ -61,11 +59,6 @@ export default function Settings() {
           </TabsContent>
         )}
 
-        {isAdmin && (
-          <TabsContent value="music-sources" className="mt-4">
-            <MusicSourcesTab />
-          </TabsContent>
-        )}
       </Tabs>
     </div>
   );

@@ -36,9 +36,10 @@ import {
   Volume2, VolumeX, Upload, Search, Download, ListMusic, Shuffle,
   Repeat, Repeat1, Power, PowerOff, RefreshCw, Pencil, X, Loader2,
   Youtube, FileAudio, Link, GripVertical, Music2, Radio, Clock,
-  Video,
+  Video, Settings as SettingsIcon,
 } from 'lucide-react';
 import { VideoStreamTab } from '@/components/video/VideoStreamTab';
+import { MusicSourcesTab } from '@/components/settings/MusicSourcesTab';
 import { toast } from 'sonner';
 import { formatBytes } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
@@ -1717,6 +1718,7 @@ export default function MusicBots() {
           <TabsTrigger value="library"><FileAudio className="h-3.5 w-3.5 mr-1.5" /> {t('music.bots.library')}</TabsTrigger>
           <TabsTrigger value="playlists"><ListMusic className="h-3.5 w-3.5 mr-1.5" /> {t('music.bots.playlists')}</TabsTrigger>
           <TabsTrigger value="radio"><Radio className="h-3.5 w-3.5 mr-1.5" /> {t('music.bots.radio')}</TabsTrigger>
+          <TabsTrigger value="sources"><SettingsIcon className="h-3.5 w-3.5 mr-1.5" /> {t('music.bots.sources')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="bots"><BotsTab /></TabsContent>
@@ -1725,6 +1727,7 @@ export default function MusicBots() {
         <TabsContent value="library"><LibraryTab /></TabsContent>
         <TabsContent value="playlists"><PlaylistsTab /></TabsContent>
         <TabsContent value="radio"><RadioTab /></TabsContent>
+        <TabsContent value="sources"><MusicSourcesTab /></TabsContent>
       </Tabs>
     </div>
   );

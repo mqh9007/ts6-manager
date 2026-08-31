@@ -260,7 +260,7 @@
     "noServer": "未选择服务器",
     "permanent": "永久",
     "reason": "原因",
-    "search": "搜索封禁...",
+    "search": "搜索被封禁用户...",
     "title": "封禁",
     "toast": {
       "added": "封禁已添加",
