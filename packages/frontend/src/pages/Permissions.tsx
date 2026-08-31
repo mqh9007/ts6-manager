@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { permissionsApi } from '@/api/permissions.api';
 import { useServerStore } from '@/stores/server.store';
@@ -16,26 +17,26 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-// Permission categories based on TS3 naming convention
-const PERM_CATEGORIES: Record<string, string> = {
-  b_virtualserver: 'Virtual Server',
-  b_serverinstance: 'Server Instance',
-  b_serverquery: 'Server Query',
-  b_channel: 'Channel',
-  b_client: 'Client',
-  b_group: 'Group',
-  b_ft: 'File Transfer',
-  i_channel: 'Channel (Values)',
-  i_group: 'Group (Values)',
-  i_client: 'Client (Values)',
-  i_ft: 'File Transfer (Values)',
-  i_max: 'Limits',
-  i_needed: 'Needed Powers',
+// Permission category keys for i18n lookup
+const PERM_CATEGORY_KEYS: Record<string, string> = {
+  b_virtualserver: 'virtualServer',
+  b_serverinstance: 'serverInstance',
+  b_serverquery: 'serverQuery',
+  b_channel: 'channel',
+  b_client: 'client',
+  b_group: 'group',
+  b_ft: 'fileTransfer',
+  i_channel: 'channelValues',
+  i_group: 'groupValues',
+  i_client: 'clientValues',
+  i_ft: 'fileTransferValues',
+  i_max: 'limits',
+  i_needed: 'neededPowers',
 };
 
 function getCategoryKey(permsid: string): string {
   // Match longest prefix first
-  const prefixes = Object.keys(PERM_CATEGORIES).sort((a, b) => b.length - a.length);
+  const prefixes = Object.keys(PERM_CATEGORY_KEYS).sort((a, b) => b.length - a.length);
   for (const prefix of prefixes) {
     if (permsid.startsWith(prefix)) return prefix;
   }
@@ -65,14 +66,15 @@ interface PendingChange {
   action: 'set' | 'remove';
 }
 
-const LAYERS: { key: PermLayer; label: string; icon: React.ElementType }[] = [
-  { key: 'server-group', label: 'Server Groups', icon: Shield },
-  { key: 'channel-group', label: 'Channel Groups', icon: Users },
-  { key: 'channel', label: 'Channel', icon: Hash },
-  { key: 'client', label: 'Client', icon: User },
+const LAYER_KEYS: { key: PermLayer; labelKey: string; icon: React.ElementType }[] = [
+  { key: 'server-group', labelKey: 'serverGroup', icon: Shield },
+  { key: 'channel-group', labelKey: 'channelGroup', icon: Users },
+  { key: 'channel', labelKey: 'channel', icon: Hash },
+  { key: 'client', labelKey: 'client', icon: User },
 ];
 
 export default function Permissions() {
+  const { t } = useTranslation();
   const { selectedConfigId: c, selectedSid: s } = useServerStore();
   const qc = useQueryClient();
 
@@ -243,16 +245,17 @@ export default function Permissions() {
       }
     },
     onSuccess: () => {
-      toast.success('Permissions saved');
+      toast.success(t('permissions.toast.saved'));
       setChanges(new Map());
       qc.invalidateQueries({ queryKey: ['entity-perms', c, s, layer, entityId] });
     },
-    onError: () => toast.error('Failed to save permissions'),
+    onError: (err: any) => toast.error(err?.response?.data?.error || t('permissions.toast.saveFailed')),
   });
 
-  if (!c || !s) return <EmptyState icon={Lock} title="No server selected" />;
+  if (!c || !s) return <EmptyState icon={Lock} title={t('permissions.noServer')} />;
   if (loadingDefs) return <PageLoader />;
 
+  const currentLayer = LAYER_KEYS.find((l) => l.key === layer);
   const entities = (() => {
     switch (layer) {
       case 'server-group':
@@ -280,15 +283,15 @@ export default function Permissions() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Permissions</h1>
+        <h1 className="text-xl font-semibold">{t('permissions.title')}</h1>
         {changes.size > 0 && (
           <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="font-mono-data">{changes.size} change(s)</Badge>
+            <Badge variant="secondary" className="font-mono-data">{t('permissions.pendingChanges', { count: changes.size })}</Badge>
             <Button variant="outline" size="sm" onClick={() => setChanges(new Map())}>
-              <X className="h-3.5 w-3.5 mr-1" /> Discard
+              <X className="h-3.5 w-3.5 mr-1" /> {t('permissions.discard')}
             </Button>
             <Button size="sm" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
-              <Save className="h-3.5 w-3.5 mr-1" /> Save
+              <Save className="h-3.5 w-3.5 mr-1" /> {t('common.save')}
             </Button>
           </div>
         )}
@@ -296,7 +299,7 @@ export default function Permissions() {
 
       {/* Layer Tabs */}
       <div className="flex gap-1 p-1 bg-muted/30 rounded-lg w-fit">
-        {LAYERS.map(({ key, label, icon: Icon }) => (
+        {LAYER_KEYS.map(({ key, labelKey, icon: Icon }) => (
           <button
             key={key}
             onClick={() => setLayer(key)}
@@ -308,7 +311,7 @@ export default function Permissions() {
             )}
           >
             <Icon className="h-3.5 w-3.5" />
-            {label}
+            {t(`permissions.layer.${labelKey}`)}
           </button>
         ))}
       </div>
@@ -318,7 +321,7 @@ export default function Permissions() {
         <Card className="col-span-3">
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Select {LAYERS.find((l) => l.key === layer)?.label.replace(/s$/, '')}
+              {t('permissions.selectEntity', { entity: currentLayer ? t(`permissions.layer.${currentLayer.labelKey}`).replace(/s$/, '') : '' })}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -340,7 +343,7 @@ export default function Permissions() {
                   </button>
                 ))}
                 {entities.length === 0 && (
-                  <p className="text-xs text-muted-foreground text-center py-4">No entities found</p>
+                  <p className="text-xs text-muted-foreground text-center py-4">{t('permissions.noEntities')}</p>
                 )}
               </div>
             </ScrollArea>
@@ -352,13 +355,13 @@ export default function Permissions() {
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                {entityId ? `Permissions` : 'Select an entity'}
+                {entityId ? t('permissions.title') : t('permissions.selectEntityPrompt')}
               </CardTitle>
               {entityId && (
                 <div className="relative w-64">
                   <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-muted-foreground" />
                   <Input
-                    placeholder="Search permissions..."
+                    placeholder={t('permissions.search')}
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="pl-7 h-8 text-xs"
@@ -371,7 +374,7 @@ export default function Permissions() {
             <ScrollArea className="h-[500px]">
               {!entityId ? (
                 <div className="flex items-center justify-center h-[400px]">
-                  <p className="text-sm text-muted-foreground">Select an entity from the left panel</p>
+                  <p className="text-sm text-muted-foreground">{t('permissions.selectEntityHint')}</p>
                 </div>
               ) : loadingPerms ? (
                 <div className="flex items-center justify-center h-[400px]">
@@ -386,17 +389,17 @@ export default function Permissions() {
                         className="flex items-center gap-1.5 w-full px-2 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors rounded"
                       >
                         {expandedCats.has(catKey) ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                        {PERM_CATEGORIES[catKey] || catKey}
+                        {catKey === 'other' ? t('permissions.category.other') : t(`permissions.category.${PERM_CATEGORY_KEYS[catKey]}`)}
                         <Badge variant="secondary" className="text-[9px] h-4 ml-1">{perms.length}</Badge>
                       </button>
                       {expandedCats.has(catKey) && (
                         <div className="ml-4 border-l border-border/50 pl-2">
                           {/* Header */}
                           <div className="grid grid-cols-12 gap-2 px-2 py-1 text-[10px] text-muted-foreground uppercase tracking-wider">
-                            <div className="col-span-5">Permission</div>
-                            <div className="col-span-2 text-center">Value</div>
-                            <div className="col-span-1 text-center">Skip</div>
-                            <div className="col-span-1 text-center">Negate</div>
+                            <div className="col-span-5">{t('permissions.col.name')}</div>
+                            <div className="col-span-2 text-center">{t('permissions.col.value')}</div>
+                            <div className="col-span-1 text-center">{t('permissions.col.skip')}</div>
+                            <div className="col-span-1 text-center">{t('permissions.col.negate')}</div>
                             <div className="col-span-3"></div>
                           </div>
                           {perms.map((perm) => {
@@ -438,7 +441,7 @@ export default function Permissions() {
                                       type="number"
                                       className="h-6 w-20 text-xs text-center font-mono-data px-1"
                                       value={effective?.permvalue ?? ''}
-                                      placeholder="—"
+                                      placeholder={t('permissions.valueUnset')}
                                       onChange={(e) => {
                                         const val = parseInt(e.target.value);
                                         if (!isNaN(val)) {
@@ -464,7 +467,7 @@ export default function Permissions() {
                                           ? 'bg-amber-500/20 border-amber-500 text-amber-400'
                                           : 'border-border/50',
                                       )}
-                                      title="Skip"
+                                      title={t('permissions.action.skip')}
                                     >
                                       {isSet && effective?.permskip ? 'S' : ''}
                                     </button>
@@ -484,7 +487,7 @@ export default function Permissions() {
                                           ? 'bg-destructive/20 border-destructive text-destructive'
                                           : 'border-border/50',
                                       )}
-                                      title="Negate"
+                                      title={t('permissions.action.negate')}
                                     >
                                       {isSet && effective?.permnegated ? 'N' : ''}
                                     </button>
@@ -495,13 +498,13 @@ export default function Permissions() {
                                     <button
                                       onClick={() => removePerm(perm.permsid)}
                                       className="p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                                      title="Remove permission"
+                                      title={t('permissions.action.remove')}
                                     >
                                       <Minus className="h-3 w-3" />
                                     </button>
                                   )}
                                   {isChanged && (
-                                    <span className="text-[9px] text-primary font-mono-data">modified</span>
+                                    <span className="text-[9px] text-primary font-mono-data">{t('permissions.modified')}</span>
                                   )}
                                 </div>
                               </div>
@@ -513,7 +516,7 @@ export default function Permissions() {
                   ))}
                   {categories.size === 0 && (
                     <div className="flex items-center justify-center h-[300px]">
-                      <p className="text-sm text-muted-foreground">No permissions match your search</p>
+                      <p className="text-sm text-muted-foreground">{t('permissions.noMatch')}</p>
                     </div>
                   )}
                 </div>

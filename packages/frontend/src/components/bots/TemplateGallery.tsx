@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 
 interface TemplateGalleryProps {
   open: boolean;
@@ -16,6 +17,7 @@ interface TemplateGalleryProps {
 }
 
 export function TemplateGallery({ open, onOpenChange, onSelect }: TemplateGalleryProps) {
+  const { t } = useTranslation();
   const [selected, setSelected] = useState<BotTemplate | null>(null);
   const [config, setConfig] = useState<Record<string, string>>({});
 
@@ -45,7 +47,7 @@ export function TemplateGallery({ open, onOpenChange, onSelect }: TemplateGaller
   const handleCreate = () => {
     if (!selected) return;
     const flowData = selected.flowDataFactory(config);
-    onSelect(selected.name, selected.description, flowData);
+    onSelect(t(selected.nameKey), t(selected.descriptionKey), flowData);
     handleClose(false);
   };
 
@@ -64,7 +66,7 @@ export function TemplateGallery({ open, onOpenChange, onSelect }: TemplateGaller
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
               )}
-              {selected ? `Configure: ${selected.name}` : 'Flow Templates'}
+              {selected ? `${t('templates.configure')}: ${t(selected.nameKey)}` : t('templates.flowTemplates')}
             </DialogTitle>
           </DialogHeader>
         </div>
@@ -73,13 +75,13 @@ export function TemplateGallery({ open, onOpenChange, onSelect }: TemplateGaller
           <div className="overflow-y-auto max-h-[60vh] px-6">
             <div className="space-y-6 pb-4">
               {TEMPLATE_CATEGORIES.map((cat) => {
-                const templates = BOT_TEMPLATES.filter(t => t.category === cat.id);
+                const templates = BOT_TEMPLATES.filter(tpl => tpl.category === cat.id);
                 if (templates.length === 0) return null;
                 return (
                   <div key={cat.id}>
                     <div className="mb-2">
-                      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">{cat.label}</p>
-                      <p className="text-[10px] text-muted-foreground">{cat.description}</p>
+                      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">{t(cat.labelKey)}</p>
+                      <p className="text-[10px] text-muted-foreground">{t(cat.descriptionKey)}</p>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       {templates.map((tpl) => {
@@ -97,12 +99,12 @@ export function TemplateGallery({ open, onOpenChange, onSelect }: TemplateGaller
                               <Icon className="h-4 w-4 text-primary" />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="text-xs font-medium">{tpl.name}</p>
-                              <p className="text-[10px] text-muted-foreground line-clamp-2 mt-0.5">{tpl.description}</p>
+                              <p className="text-xs font-medium">{t(tpl.nameKey)}</p>
+                              <p className="text-[10px] text-muted-foreground line-clamp-2 mt-0.5">{t(tpl.descriptionKey)}</p>
                               {tpl.configFields.length > 0 && (
                                 <div className="flex gap-1 mt-1.5 flex-wrap">
                                   {tpl.configFields.filter(f => f.required).map(f => (
-                                    <Badge key={f.key} variant="secondary" className="text-[8px] px-1 py-0">{f.label}</Badge>
+                                    <Badge key={f.key} variant="secondary" className="text-[8px] px-1 py-0">{t(f.labelKey)}</Badge>
                                   ))}
                                 </div>
                               )}
@@ -120,16 +122,16 @@ export function TemplateGallery({ open, onOpenChange, onSelect }: TemplateGaller
           <>
             <div className="overflow-y-auto max-h-[60vh] px-6">
               <div className="space-y-4 pb-2">
-                <p className="text-xs text-muted-foreground">{selected.description}</p>
+                <p className="text-xs text-muted-foreground">{t(selected.descriptionKey)}</p>
 
                 {selected.configFields.length === 0 ? (
-                  <p className="text-xs text-muted-foreground/60">No configuration needed — ready to create.</p>
+                  <p className="text-xs text-muted-foreground/60">{t('templates.noConfigNeeded')}</p>
                 ) : (
                   <div className="space-y-3">
                     {selected.configFields.map((field) => (
                       <div key={field.key}>
                         <Label className="text-[10px] text-muted-foreground">
-                          {field.label} {field.required && <span className="text-destructive">*</span>}
+                          {t(field.labelKey)} {field.required && <span className="text-destructive">*</span>}
                         </Label>
                         {field.type === 'select' ? (
                           <Select
@@ -139,7 +141,7 @@ export function TemplateGallery({ open, onOpenChange, onSelect }: TemplateGaller
                             <SelectTrigger className="h-7 text-xs mt-1"><SelectValue /></SelectTrigger>
                             <SelectContent>
                               {field.options?.map(opt => (
-                                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                <SelectItem key={opt.value} value={opt.value}>{t(opt.labelKey)}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -161,9 +163,9 @@ export function TemplateGallery({ open, onOpenChange, onSelect }: TemplateGaller
 
             <div className="p-6 pt-2">
               <DialogFooter>
-                <Button variant="outline" size="sm" onClick={handleBack}>Back</Button>
+                <Button variant="outline" size="sm" onClick={handleBack}>{t('common.cancel')}</Button>
                 <Button size="sm" onClick={handleCreate} disabled={selected.configFields.length > 0 && !isValid}>
-                  Create Bot
+                  {t('templates.createBot')}
                 </Button>
               </DialogFooter>
             </div>

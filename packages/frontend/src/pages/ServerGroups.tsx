@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useServerGroups, useServerGroupMembers, useCreateServerGroup, useDeleteServerGroup } from '@/hooks/use-groups';
 import { useServerStore } from '@/stores/server.store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,6 +17,7 @@ import { Shield, Plus, Trash2, Users, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ServerGroups() {
+  const { t } = useTranslation();
   const { selectedConfigId, selectedSid } = useServerStore();
   const { data, isLoading } = useServerGroups();
   const createGroup = useCreateServerGroup();
@@ -26,7 +28,7 @@ export default function ServerGroups() {
   const [deleteTarget, setDeleteTarget] = useState<{ sgid: number; name: string } | null>(null);
   const [newName, setNewName] = useState('');
 
-  if (!selectedConfigId || !selectedSid) return <EmptyState icon={Shield} title="No server selected" />;
+  if (!selectedConfigId || !selectedSid) return <EmptyState icon={Shield} title={t('groups.server.noServer')} />;
   if (isLoading) return <PageLoader />;
 
   const groups = Array.isArray(data) ? data : [];
@@ -34,9 +36,9 @@ export default function ServerGroups() {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Server Groups</h1>
+        <h1 className="text-xl font-semibold">{t('groups.server.title')}</h1>
         <Button size="sm" onClick={() => setShowCreate(true)}>
-          <Plus className="h-4 w-4 mr-1" /> Create Group
+          <Plus className="h-4 w-4 mr-1" /> {t('groups.server.create')}
         </Button>
       </div>
 
@@ -44,7 +46,7 @@ export default function ServerGroups() {
         {/* Group List */}
         <Card className="lg:col-span-1">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Groups ({groups.length})</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t('groups.server.groupsCount', { count: groups.length })}</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <ScrollArea className="h-[500px]">
@@ -68,6 +70,9 @@ export default function ServerGroups() {
                     </div>
                   </button>
                 ))}
+                {groups.length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-4">{t('groups.server.noGroups')}</p>
+                )}
               </div>
             </ScrollArea>
           </CardContent>
@@ -79,22 +84,22 @@ export default function ServerGroups() {
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <Users className="h-4 w-4 text-primary" />
-                Members
-                {selectedGroup && <Badge variant="default" className="font-mono-data text-[10px]">SGID: {selectedGroup}</Badge>}
+                {t('groups.server.members')}
+                {selectedGroup && <Badge variant="default" className="font-mono-data text-[10px]">{t('groups.server.sgid', { id: selectedGroup })}</Badge>}
               </CardTitle>
               {selectedGroup && (
                 <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => {
                   const g = groups.find((g: any) => g.sgid === selectedGroup);
                   if (g) setDeleteTarget({ sgid: g.sgid, name: g.name });
                 }}>
-                  <Trash2 className="h-3 w-3 mr-1" /> Delete Group
+                  <Trash2 className="h-3 w-3 mr-1" /> {t('groups.server.deleteGroup')}
                 </Button>
               )}
             </div>
           </CardHeader>
           <CardContent>
             {!selectedGroup ? (
-              <p className="text-sm text-muted-foreground text-center py-12">Select a group to view its members</p>
+              <p className="text-sm text-muted-foreground text-center py-12">{t('groups.server.selectGroupHint')}</p>
             ) : (
               <ScrollArea className="h-[440px]">
                 <div className="space-y-1">
@@ -105,13 +110,13 @@ export default function ServerGroups() {
                           <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-mono-data text-primary">
                             {m.client_nickname?.[0]?.toUpperCase() || '?'}
                           </div>
-                          <span className="text-sm">{m.client_nickname || `DBID: ${m.cldbid}`}</span>
+                          <span className="text-sm">{m.client_nickname || t('groups.server.dbid', { id: m.cldbid })}</span>
                         </div>
-                        <span className="text-xs text-muted-foreground font-mono-data">DBID: {m.cldbid}</span>
+                        <span className="text-xs text-muted-foreground font-mono-data">{t('groups.server.dbid', { id: m.cldbid })}</span>
                       </div>
                     ))
                   ) : (
-                    <p className="text-sm text-muted-foreground text-center py-8">No members in this group</p>
+                    <p className="text-sm text-muted-foreground text-center py-8">{t('groups.server.noMembers')}</p>
                   )}
                 </div>
               </ScrollArea>
@@ -122,16 +127,16 @@ export default function ServerGroups() {
 
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Create Server Group</DialogTitle></DialogHeader>
-          <div><Label className="text-xs">Group Name</Label><Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="New Group" autoFocus /></div>
+          <DialogHeader><DialogTitle>{t('groups.server.dialog.create')}</DialogTitle></DialogHeader>
+          <div><Label className="text-xs">{t('groups.server.dialog.nameLabel')}</Label><Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder={t('groups.server.dialog.namePlaceholder')} autoFocus /></div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
-            <Button onClick={() => { createGroup.mutate(newName, { onSuccess: () => { toast.success('Group created'); setShowCreate(false); setNewName(''); } }); }}>Create</Button>
+            <Button variant="outline" onClick={() => setShowCreate(false)}>{t('common.cancel')}</Button>
+            <Button onClick={() => { createGroup.mutate(newName, { onSuccess: () => { toast.success(t('groups.server.toast.created')); setShowCreate(false); setNewName(''); } }); }}>{t('groups.server.dialog.create')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <ConfirmDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)} title="Delete Server Group" description={`Delete "${deleteTarget?.name}"?`} confirmLabel="Delete" destructive onConfirm={() => { if (deleteTarget) deleteGroup.mutate(deleteTarget.sgid, { onSuccess: () => { toast.success('Group deleted'); setDeleteTarget(null); setSelectedGroup(null); } }); }} />
+      <ConfirmDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)} title={t('groups.server.delete.title')} description={t('groups.server.delete.description', { name: deleteTarget?.name })} confirmLabel={t('groups.server.delete.confirm')} destructive onConfirm={() => { if (deleteTarget) deleteGroup.mutate(deleteTarget.sgid, { onSuccess: () => { toast.success(t('groups.server.toast.deleted')); setDeleteTarget(null); setSelectedGroup(null); } }); }} />
     </div>
   );
 }

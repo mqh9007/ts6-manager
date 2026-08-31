@@ -7,8 +7,10 @@ import { Label } from '@/components/ui/label';
 import { useLogin } from '@/hooks/use-auth';
 import { useAuthStore } from '@/stores/auth.store';
 import { Loader2, AlertCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export default function Login() {
+  const { t } = useTranslation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const login = useLogin();
@@ -32,18 +34,18 @@ export default function Login() {
           <div className="inline-flex items-center justify-center h-14 w-14 rounded-xl bg-primary/10 border border-primary/20 mb-4">
             <span className="text-primary font-bold text-xl font-mono-data text-glow">TS</span>
           </div>
-          <h1 className="text-xl font-semibold text-foreground">TeamSpeak 6 Manager</h1>
-          <p className="text-sm text-muted-foreground mt-1">Server Administration Panel</p>
+          <h1 className="text-xl font-semibold text-foreground">{t('auth.login.title')}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{t('auth.login.subtitle')}</p>
         </div>
 
         <Card className="border-border/50 backdrop-blur-sm">
           <CardHeader className="pb-4">
-            <h2 className="text-sm font-medium text-center text-muted-foreground">Sign in to continue</h2>
+            <h2 className="text-sm font-medium text-center text-muted-foreground">{t('auth.login.signInPrompt')}</h2>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="username" className="text-xs">Username</Label>
+                <Label htmlFor="username" className="text-xs">{t('auth.username')}</Label>
                 <Input
                   id="username"
                   value={username}
@@ -54,7 +56,7 @@ export default function Login() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-xs">Password</Label>
+                <Label htmlFor="password" className="text-xs">{t('auth.password')}</Label>
                 <Input
                   id="password"
                   type="password"
@@ -68,7 +70,7 @@ export default function Login() {
               {login.isError && (
                 <div className="flex items-center gap-2 text-destructive text-xs bg-destructive/10 rounded-md px-3 py-2">
                   <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                  <span>Invalid credentials. Please try again.</span>
+                  <span>{t('auth.login.invalidCredentials')}</span>
                 </div>
               )}
 
@@ -76,10 +78,10 @@ export default function Login() {
                 {login.isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Signing in...
+                    {t('auth.login.signingIn')}
                   </>
                 ) : (
-                  'Sign In'
+                  t('auth.login.submit')
                 )}
               </Button>
             </form>

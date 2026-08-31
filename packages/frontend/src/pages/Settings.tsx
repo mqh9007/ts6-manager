@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useTranslation, Trans } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersApi } from '@/api/bots.api';
 import { authApi } from '@/api/auth.api';
@@ -23,18 +24,19 @@ import { MusicSourcesTab } from '@/components/settings/MusicSourcesTab';
 export default function Settings() {
   const { user } = useAuthStore();
   const isAdmin = user?.role === 'admin';
+  const { t } = useTranslation();
 
   return (
     <div className="space-y-5">
-      <h1 className="text-xl font-semibold">Settings</h1>
+      <h1 className="text-xl font-semibold">{t('settings.title')}</h1>
 
       <Tabs defaultValue="account">
         <TabsList>
-          {isAdmin && <TabsTrigger value="connections"><Server className="h-3.5 w-3.5 mr-1" /> Connections</TabsTrigger>}
-          <TabsTrigger value="account"><Lock className="h-3.5 w-3.5 mr-1" /> Account</TabsTrigger>
-          {isAdmin && <TabsTrigger value="users"><Users className="h-3.5 w-3.5 mr-1" /> Users</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="youtube"><Youtube className="h-3.5 w-3.5 mr-1" /> YouTube</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="music-sources"><SettingsIcon className="h-3.5 w-3.5 mr-1" /> Music Sources</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="connections"><Server className="h-3.5 w-3.5 mr-1" /> {t('settings.tabs.connections')}</TabsTrigger>}
+          <TabsTrigger value="account"><Lock className="h-3.5 w-3.5 mr-1" /> {t('settings.tabs.account')}</TabsTrigger>
+          {isAdmin && <TabsTrigger value="users"><Users className="h-3.5 w-3.5 mr-1" /> {t('settings.tabs.users')}</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="youtube"><Youtube className="h-3.5 w-3.5 mr-1" /> {t('settings.tabs.youtube')}</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="music-sources"><SettingsIcon className="h-3.5 w-3.5 mr-1" /> {t('settings.tabs.musicSources')}</TabsTrigger>}
         </TabsList>
 
         {isAdmin && (
@@ -70,6 +72,7 @@ export default function Settings() {
 }
 
 function AccountTab() {
+  const { t } = useTranslation();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -80,22 +83,22 @@ function AccountTab() {
 
   const handleSubmit = () => {
     if (newPassword.length < 6) {
-      toast.error('New password must be at least 6 characters');
+      toast.error(t('settings.account.toast.minLength'));
       return;
     }
     if (newPassword !== confirmPassword) {
-      toast.error('Passwords do not match');
+      toast.error(t('settings.account.toast.mismatch'));
       return;
     }
     changePassword.mutate(undefined, {
       onSuccess: () => {
-        toast.success('Password changed successfully');
+        toast.success(t('settings.account.toast.changed'));
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
       },
       onError: (err: any) => {
-        const msg = err?.response?.data?.error || 'Failed to change password';
+        const msg = err?.response?.data?.error || t('settings.account.toast.failed');
         toast.error(msg);
       },
     });
@@ -105,27 +108,27 @@ function AccountTab() {
     <div className="max-w-md">
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm font-medium">Change Password</CardTitle>
+          <CardTitle className="text-sm font-medium">{t('settings.account.changePassword')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div>
-            <Label className="text-xs">Current Password</Label>
-            <Input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="Enter current password" />
+            <Label className="text-xs">{t('settings.account.currentPassword')}</Label>
+            <Input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder={t('settings.account.currentPasswordPlaceholder')} />
           </div>
           <div>
-            <Label className="text-xs">New Password</Label>
-            <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Min. 6 characters" />
+            <Label className="text-xs">{t('settings.account.newPassword')}</Label>
+            <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder={t('settings.account.newPasswordPlaceholder')} />
           </div>
           <div>
-            <Label className="text-xs">Confirm New Password</Label>
-            <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Repeat new password" />
+            <Label className="text-xs">{t('settings.account.confirmNewPassword')}</Label>
+            <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder={t('settings.account.confirmPasswordPlaceholder')} />
           </div>
           <Button
             onClick={handleSubmit}
             disabled={!currentPassword || !newPassword || !confirmPassword || changePassword.isPending}
             className="w-full mt-1"
           >
-            {changePassword.isPending ? 'Changing...' : 'Change Password'}
+            {changePassword.isPending ? t('settings.account.changing') : t('settings.account.submit')}
           </Button>
         </CardContent>
       </Card>
@@ -134,6 +137,7 @@ function AccountTab() {
 }
 
 function ConnectionsTab() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const { data: servers, isLoading } = useQuery({ queryKey: ['servers'], queryFn: serversApi.list });
   const createServer = useMutation({ mutationFn: (data: any) => serversApi.create(data), onSuccess: () => qc.invalidateQueries({ queryKey: ['servers'] }) });
@@ -156,13 +160,13 @@ function ConnectionsTab() {
     const payload = { ...form, webqueryPort: parseInt(form.webqueryPort), sshPort: parseInt(form.sshPort) };
     if (editId) {
       updateServer.mutate({ id: editId, data: payload }, {
-        onSuccess: () => { toast.success('Connection updated'); setEditId(null); setShowAdd(false); resetForm(); },
-        onError: () => toast.error('Failed to update'),
+        onSuccess: () => { toast.success(t('settings.connections.toast.updated')); setEditId(null); setShowAdd(false); resetForm(); },
+        onError: () => toast.error(t('settings.connections.toast.updateFailed')),
       });
     } else {
       createServer.mutate(payload, {
-        onSuccess: () => { toast.success('Connection added'); setShowAdd(false); resetForm(); },
-        onError: () => toast.error('Failed to create'),
+        onSuccess: () => { toast.success(t('settings.connections.toast.added')); setShowAdd(false); resetForm(); },
+        onError: () => toast.error(t('settings.connections.toast.createFailed')),
       });
     }
   };
@@ -185,8 +189,8 @@ function ConnectionsTab() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">Manage TeamSpeak server connections</p>
-        <Button size="sm" onClick={() => { resetForm(); setEditId(null); setShowAdd(true); }}><Plus className="h-4 w-4 mr-1" /> Add Connection</Button>
+        <p className="text-sm text-muted-foreground">{t('settings.connections.subtitle')}</p>
+        <Button size="sm" onClick={() => { resetForm(); setEditId(null); setShowAdd(true); }}><Plus className="h-4 w-4 mr-1" /> {t('settings.connections.add')}</Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -196,28 +200,28 @@ function ConnectionsTab() {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-medium">{server.name}</CardTitle>
                 <Badge variant={server.enabled ? 'default' : 'secondary'} className="text-[10px]">
-                  {server.enabled ? 'Enabled' : 'Disabled'}
+                  {server.enabled ? t('settings.connections.enabled') : t('settings.connections.disabled')}
                 </Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-2">
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <span className="text-muted-foreground">Host</span>
+                <span className="text-muted-foreground">{t('settings.connections.host')}</span>
                 <span className="font-mono-data">{server.host}:{server.webqueryPort}</span>
-                <span className="text-muted-foreground">Protocol</span>
+                <span className="text-muted-foreground">{t('settings.connections.protocol')}</span>
                 <span>{server.useHttps ? 'HTTPS' : 'HTTP'}</span>
-                <span className="text-muted-foreground">SSH</span>
+                <span className="text-muted-foreground">{t('settings.connections.ssh')}</span>
                 <span className="font-mono-data">{server.sshPort || '-'}</span>
               </div>
               <div className="flex items-center gap-1 pt-2">
                 <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => testServer.mutate(server.id, {
-                  onSuccess: () => toast.success('Connection successful'),
-                  onError: () => toast.error('Connection failed'),
+                  onSuccess: () => toast.success(t('settings.connections.toast.testSuccess')),
+                  onError: () => toast.error(t('settings.connections.toast.testFailed')),
                 })}>
-                  <TestTube className="h-3 w-3 mr-1" /> Test
+                  <TestTube className="h-3 w-3 mr-1" /> {t('settings.connections.test')}
                 </Button>
                 <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => openEdit(server)}>
-                  <Pencil className="h-3 w-3 mr-1" /> Edit
+                  <Pencil className="h-3 w-3 mr-1" /> {t('settings.connections.edit')}
                 </Button>
                 <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setDeleteId(server.id)}>
                   <Trash2 className="h-3.5 w-3.5" />
@@ -231,30 +235,30 @@ function ConnectionsTab() {
       {/* Add/Edit Dialog */}
       <Dialog open={showAdd} onOpenChange={(v) => { if (!v) { setShowAdd(false); setEditId(null); resetForm(); } else setShowAdd(true); }}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>{editId ? 'Edit Connection' : 'Add Connection'}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editId ? t('settings.connections.editTitle') : t('settings.connections.addTitle')}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div><Label className="text-xs">Name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="My TS Server" /></div>
+            <div><Label className="text-xs">{t('settings.connections.name')}</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t('settings.connections.namePlaceholder')} /></div>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label className="text-xs">Host</Label><Input value={form.host} onChange={(e) => setForm({ ...form, host: e.target.value })} placeholder="127.0.0.1" /></div>
-              <div><Label className="text-xs">WebQuery Port</Label><Input type="number" value={form.webqueryPort} onChange={(e) => setForm({ ...form, webqueryPort: e.target.value })} /></div>
+              <div><Label className="text-xs">{t('settings.connections.hostLabel')}</Label><Input value={form.host} onChange={(e) => setForm({ ...form, host: e.target.value })} placeholder={t('settings.connections.hostPlaceholder')} /></div>
+              <div><Label className="text-xs">{t('settings.connections.webqueryPort')}</Label><Input type="number" value={form.webqueryPort} onChange={(e) => setForm({ ...form, webqueryPort: e.target.value })} /></div>
             </div>
             <div>
-              <Label className="text-xs">API Key</Label>
-              <Input value={form.apiKey} onChange={(e) => setForm({ ...form, apiKey: e.target.value })} placeholder={editId ? '(unchanged — enter new key to update)' : 'WebQuery API Key'} type="password" />
+              <Label className="text-xs">{t('settings.connections.apiKey')}</Label>
+              <Input value={form.apiKey} onChange={(e) => setForm({ ...form, apiKey: e.target.value })} placeholder={editId ? t('settings.connections.apiKeyPlaceholderEdit') : t('settings.connections.apiKeyPlaceholder')} type="password" />
             </div>
             <div className="flex items-center gap-2">
               <Switch checked={form.useHttps} onCheckedChange={(v) => setForm({ ...form, useHttps: v })} />
-              <Label className="text-xs">Use HTTPS</Label>
+              <Label className="text-xs">{t('settings.connections.useHttps')}</Label>
             </div>
             <div className="grid grid-cols-3 gap-3">
-              <div><Label className="text-xs">SSH Port</Label><Input type="number" value={form.sshPort} onChange={(e) => setForm({ ...form, sshPort: e.target.value })} /></div>
-              <div><Label className="text-xs">SSH User</Label><Input value={form.sshUsername} onChange={(e) => setForm({ ...form, sshUsername: e.target.value })} placeholder="serveradmin" /></div>
-              <div><Label className="text-xs">SSH Password</Label><Input type="password" value={form.sshPassword} onChange={(e) => setForm({ ...form, sshPassword: e.target.value })} /></div>
+              <div><Label className="text-xs">{t('settings.connections.sshPort')}</Label><Input type="number" value={form.sshPort} onChange={(e) => setForm({ ...form, sshPort: e.target.value })} /></div>
+              <div><Label className="text-xs">{t('settings.connections.sshUser')}</Label><Input value={form.sshUsername} onChange={(e) => setForm({ ...form, sshUsername: e.target.value })} placeholder={t('settings.connections.sshUserPlaceholder')} /></div>
+              <div><Label className="text-xs">{t('settings.connections.sshPassword')}</Label><Input type="password" value={form.sshPassword} onChange={(e) => setForm({ ...form, sshPassword: e.target.value })} /></div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setShowAdd(false); setEditId(null); resetForm(); }}>Cancel</Button>
-            <Button onClick={handleSave} disabled={!form.name || !form.host || !form.apiKey}>{editId ? 'Update' : 'Add'}</Button>
+            <Button variant="outline" onClick={() => { setShowAdd(false); setEditId(null); resetForm(); }}>{t('common.cancel')}</Button>
+            <Button onClick={handleSave} disabled={!form.name || !form.host || !form.apiKey}>{editId ? t('settings.connections.update') : t('settings.connections.addSubmit')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -262,9 +266,9 @@ function ConnectionsTab() {
       <ConfirmDialog
         open={deleteId !== null}
         onOpenChange={() => setDeleteId(null)}
-        title="Delete Connection?"
-        description="This will remove the server connection. Bots linked to this server will stop working."
-        onConfirm={() => { if (deleteId) deleteServer.mutate(deleteId, { onSuccess: () => { toast.success('Connection deleted'); setDeleteId(null); } }); }}
+        title={t('settings.connections.deleteTitle')}
+        description={t('settings.connections.deleteDescription')}
+        onConfirm={() => { if (deleteId) deleteServer.mutate(deleteId, { onSuccess: () => { toast.success(t('settings.connections.toast.deleted')); setDeleteId(null); } }); }}
         destructive
       />
     </div>
@@ -272,6 +276,7 @@ function ConnectionsTab() {
 }
 
 function UsersTab() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const { data: users, isLoading } = useQuery({ queryKey: ['users'], queryFn: usersApi.list });
   const createUser = useMutation({ mutationFn: (data: any) => usersApi.create(data), onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }) });
@@ -290,52 +295,52 @@ function UsersTab() {
 
   const handleCreate = () => {
     createUser.mutate(form, {
-      onSuccess: () => { toast.success('User created'); setShowAdd(false); setForm({ username: '', password: '', displayName: '', role: 'viewer' }); },
-      onError: () => toast.error('Failed to create user'),
+      onSuccess: () => { toast.success(t('settings.users.toast.created')); setShowAdd(false); setForm({ username: '', password: '', displayName: '', role: 'viewer' }); },
+      onError: () => toast.error(t('settings.users.toast.createFailed')),
     });
   };
 
   const handleRoleChange = (userId: number, role: string) => {
     updateUser.mutate({ id: userId, data: { role } }, {
-      onSuccess: () => toast.success('Role updated'),
-      onError: () => toast.error('Failed to update role'),
+      onSuccess: () => toast.success(t('settings.users.toast.roleUpdated')),
+      onError: () => toast.error(t('settings.users.toast.roleUpdateFailed')),
     });
   };
 
   const handleToggleEnabled = (userId: number, enabled: boolean) => {
     updateUser.mutate({ id: userId, data: { enabled } }, {
-      onSuccess: () => toast.success(enabled ? 'User enabled' : 'User disabled'),
-      onError: () => toast.error('Failed to update status'),
+      onSuccess: () => toast.success(enabled ? t('settings.users.toast.enabled') : t('settings.users.toast.disabled')),
+      onError: () => toast.error(t('settings.users.toast.statusUpdateFailed')),
     });
   };
 
   const handleResetPassword = () => {
     if (!resetPwUserId || resetPwValue.length < 6) {
-      toast.error('Password must be at least 6 characters');
+      toast.error(t('settings.users.toast.minLength'));
       return;
     }
     updateUser.mutate({ id: resetPwUserId, data: { password: resetPwValue } }, {
-      onSuccess: () => { toast.success('Password reset successfully'); setResetPwUserId(null); setResetPwValue(''); },
-      onError: () => toast.error('Failed to reset password'),
+      onSuccess: () => { toast.success(t('settings.users.toast.passwordReset')); setResetPwUserId(null); setResetPwValue(''); },
+      onError: () => toast.error(t('settings.users.toast.resetFailed')),
     });
   };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">Manage webapp users and roles</p>
-        <Button size="sm" onClick={() => setShowAdd(true)}><Plus className="h-4 w-4 mr-1" /> Add User</Button>
+        <p className="text-sm text-muted-foreground">{t('settings.users.subtitle')}</p>
+        <Button size="sm" onClick={() => setShowAdd(true)}><Plus className="h-4 w-4 mr-1" /> {t('settings.users.add')}</Button>
       </div>
 
       <div className="rounded-md border border-border overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/30">
-              <th className="h-10 px-3 text-left font-medium text-muted-foreground">Username</th>
-              <th className="h-10 px-3 text-left font-medium text-muted-foreground">Display Name</th>
-              <th className="h-10 px-3 text-left font-medium text-muted-foreground">Role</th>
-              <th className="h-10 px-3 text-left font-medium text-muted-foreground">Status</th>
-              <th className="h-10 px-3 text-right font-medium text-muted-foreground">Actions</th>
+              <th className="h-10 px-3 text-left font-medium text-muted-foreground">{t('settings.users.username')}</th>
+              <th className="h-10 px-3 text-left font-medium text-muted-foreground">{t('settings.users.displayName')}</th>
+              <th className="h-10 px-3 text-left font-medium text-muted-foreground">{t('settings.users.role')}</th>
+              <th className="h-10 px-3 text-left font-medium text-muted-foreground">{t('settings.users.status')}</th>
+              <th className="h-10 px-3 text-right font-medium text-muted-foreground">{t('settings.users.actions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -354,8 +359,8 @@ function UsersTab() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="admin">Admin</SelectItem>
-                          <SelectItem value="viewer">Viewer</SelectItem>
+                          <SelectItem value="admin">{t('settings.users.roleAdmin')}</SelectItem>
+                          <SelectItem value="viewer">{t('settings.users.roleViewer')}</SelectItem>
                         </SelectContent>
                       </Select>
                     )}
@@ -363,7 +368,7 @@ function UsersTab() {
                   <td className="px-3 py-2.5">
                     {isProtected ? (
                       <span className="inline-flex items-center gap-1 text-xs text-emerald-400">
-                        <Check className="h-3 w-3" /> Active
+                        <Check className="h-3 w-3" /> {t('settings.users.active')}
                       </span>
                     ) : (
                       <Switch
@@ -374,7 +379,7 @@ function UsersTab() {
                   </td>
                   <td className="px-3 py-2.5 text-right">
                     <div className="inline-flex items-center gap-0.5">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" title="Reset Password" onClick={() => { setResetPwUserId(u.id); setResetPwValue(''); }}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" title={t('settings.users.resetPassword')} onClick={() => { setResetPwUserId(u.id); setResetPwValue(''); }}>
                         <KeyRound className="h-3.5 w-3.5" />
                       </Button>
                       <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setDeleteId(u.id)} disabled={isProtected}>
@@ -392,25 +397,25 @@ function UsersTab() {
       {/* Add User Dialog */}
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Add User</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t('settings.users.addTitle')}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div><Label className="text-xs">Username</Label><Input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} placeholder="johndoe" /></div>
-            <div><Label className="text-xs">Display Name</Label><Input value={form.displayName} onChange={(e) => setForm({ ...form, displayName: e.target.value })} placeholder="John Doe" /></div>
-            <div><Label className="text-xs">Password</Label><Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="********" /></div>
+            <div><Label className="text-xs">{t('settings.users.username')}</Label><Input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} placeholder={t('settings.users.usernamePlaceholder')} /></div>
+            <div><Label className="text-xs">{t('settings.users.displayName')}</Label><Input value={form.displayName} onChange={(e) => setForm({ ...form, displayName: e.target.value })} placeholder={t('settings.users.displayNamePlaceholder')} /></div>
+            <div><Label className="text-xs">{t('settings.users.password')}</Label><Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder={t('settings.users.passwordPlaceholder')} /></div>
             <div>
-              <Label className="text-xs">Role</Label>
+              <Label className="text-xs">{t('settings.users.role')}</Label>
               <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="viewer">Viewer</SelectItem>
+                  <SelectItem value="admin">{t('settings.users.roleAdmin')}</SelectItem>
+                  <SelectItem value="viewer">{t('settings.users.roleViewer')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAdd(false)}>Cancel</Button>
-            <Button onClick={handleCreate} disabled={!form.username || !form.password}>Create</Button>
+            <Button variant="outline" onClick={() => setShowAdd(false)}>{t('common.cancel')}</Button>
+            <Button onClick={handleCreate} disabled={!form.username || !form.password}>{t('settings.users.create')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -419,21 +424,25 @@ function UsersTab() {
       <Dialog open={resetPwUserId !== null} onOpenChange={(v) => { if (!v) { setResetPwUserId(null); setResetPwValue(''); } }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-sm">Reset Password</DialogTitle>
+            <DialogTitle className="text-sm">{t('settings.users.resetTitle')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground">
-              Set a new password for <span className="font-medium text-foreground">{userList.find((u: any) => u.id === resetPwUserId)?.username}</span>
+              <Trans
+                i18nKey="settings.users.setNewPasswordFor"
+                values={{ username: userList.find((u: any) => u.id === resetPwUserId)?.username }}
+                components={{ strong: <span className="font-medium text-foreground" /> }}
+              />
             </p>
             <div>
-              <Label className="text-xs">New Password</Label>
-              <Input type="password" value={resetPwValue} onChange={(e) => setResetPwValue(e.target.value)} placeholder="Min. 6 characters" />
+              <Label className="text-xs">{t('settings.users.newPassword')}</Label>
+              <Input type="password" value={resetPwValue} onChange={(e) => setResetPwValue(e.target.value)} placeholder={t('settings.users.newPasswordPlaceholder')} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setResetPwUserId(null); setResetPwValue(''); }}>Cancel</Button>
+            <Button variant="outline" onClick={() => { setResetPwUserId(null); setResetPwValue(''); }}>{t('common.cancel')}</Button>
             <Button onClick={handleResetPassword} disabled={resetPwValue.length < 6 || updateUser.isPending}>
-              {updateUser.isPending ? 'Resetting...' : 'Reset Password'}
+              {updateUser.isPending ? t('settings.users.resetting') : t('settings.users.resetSubmit')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -442,9 +451,9 @@ function UsersTab() {
       <ConfirmDialog
         open={deleteId !== null}
         onOpenChange={() => setDeleteId(null)}
-        title="Delete User?"
-        description="This user will be permanently deleted."
-        onConfirm={() => { if (deleteId) deleteUser.mutate(deleteId, { onSuccess: () => { toast.success('User deleted'); setDeleteId(null); } }); }}
+        title={t('settings.users.deleteTitle')}
+        description={t('settings.users.deleteDescription')}
+        onConfirm={() => { if (deleteId) deleteUser.mutate(deleteId, { onSuccess: () => { toast.success(t('settings.users.toast.deleted')); setDeleteId(null); } }); }}
         destructive
       />
     </div>
@@ -452,6 +461,7 @@ function UsersTab() {
 }
 
 function YouTubeTab() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const [pasteMode, setPasteMode] = useState(false);
   const [cookieText, setCookieText] = useState('');
@@ -464,30 +474,30 @@ function YouTubeTab() {
   const uploadFile = useMutation({
     mutationFn: (file: File) => settingsApi.uploadYtCookieFile(file),
     onSuccess: () => {
-      toast.success('Cookie file uploaded');
+      toast.success(t('settings.youtube.toast.uploaded'));
       qc.invalidateQueries({ queryKey: ['yt-cookie-status'] });
     },
-    onError: () => toast.error('Failed to upload cookie file'),
+    onError: () => toast.error(t('settings.youtube.toast.uploadFailed')),
   });
 
   const uploadText = useMutation({
     mutationFn: (text: string) => settingsApi.uploadYtCookieText(text),
     onSuccess: () => {
-      toast.success('Cookies saved');
+      toast.success(t('settings.youtube.toast.saved'));
       setCookieText('');
       setPasteMode(false);
       qc.invalidateQueries({ queryKey: ['yt-cookie-status'] });
     },
-    onError: () => toast.error('Failed to save cookies'),
+    onError: () => toast.error(t('settings.youtube.toast.saveFailed')),
   });
 
   const deleteCookies = useMutation({
     mutationFn: () => settingsApi.deleteYtCookies(),
     onSuccess: () => {
-      toast.success('Cookie file removed');
+      toast.success(t('settings.youtube.toast.removed'));
       qc.invalidateQueries({ queryKey: ['yt-cookie-status'] });
     },
-    onError: () => toast.error('Failed to remove cookies'),
+    onError: () => toast.error(t('settings.youtube.toast.removeFailed')),
   });
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -505,22 +515,21 @@ function YouTubeTab() {
     <div className="max-w-lg space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm font-medium">YouTube Cookies</CardTitle>
+          <CardTitle className="text-sm font-medium">{t('settings.youtube.title')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-xs text-muted-foreground">
-            Upload a cookies.txt file to access age-restricted or member-only YouTube content.
-            You can export cookies from your browser using extensions like
-            {' '}<span className="font-medium">Get cookies.txt LOCALLY</span> (Chrome/Firefox).
+            {t('settings.youtube.description')}{' '}
+            <span className="font-medium">{t('settings.youtube.extensionName')}</span> (Chrome/Firefox).
           </p>
 
           {/* Status */}
           <div className="flex items-center gap-2">
             <span className={`w-2 h-2 rounded-full ${status?.active ? 'bg-green-500' : 'bg-zinc-500'}`} />
             <span className="text-sm">
-              {isLoading ? 'Loading...' : status?.active
-                ? `Cookies active (${formatSize(status.size)})`
-                : 'No cookies configured'}
+              {isLoading ? t('settings.youtube.loading') : status?.active
+                ? t('settings.youtube.active', { size: formatSize(status.size) })
+                : t('settings.youtube.noCookies')}
             </span>
           </div>
 
@@ -540,7 +549,7 @@ function YouTubeTab() {
               disabled={uploadFile.isPending}
             >
               <Upload className="h-3.5 w-3.5 mr-1" />
-              {uploadFile.isPending ? 'Uploading...' : 'Upload cookies.txt'}
+              {uploadFile.isPending ? t('settings.youtube.uploading') : t('settings.youtube.upload')}
             </Button>
             <Button
               variant="outline"
@@ -548,7 +557,7 @@ function YouTubeTab() {
               onClick={() => setPasteMode(!pasteMode)}
             >
               <FileText className="h-3.5 w-3.5 mr-1" />
-              Paste cookies
+              {t('settings.youtube.paste')}
             </Button>
             {status?.active && (
               <Button
@@ -559,7 +568,7 @@ function YouTubeTab() {
                 disabled={deleteCookies.isPending}
               >
                 <Trash2 className="h-3.5 w-3.5 mr-1" />
-                Remove
+                {t('settings.youtube.remove')}
               </Button>
             )}
           </div>
@@ -569,7 +578,7 @@ function YouTubeTab() {
             <div className="space-y-2">
               <textarea
                 className="w-full h-32 rounded-md border border-border bg-background px-3 py-2 text-xs font-mono resize-none focus:outline-none focus:ring-1 focus:ring-ring"
-                placeholder="# Netscape HTTP Cookie File&#10;.youtube.com&#9;TRUE&#9;/&#9;TRUE&#9;0&#9;COOKIE_NAME&#9;COOKIE_VALUE"
+                placeholder={t('settings.youtube.pastePlaceholder')}
                 value={cookieText}
                 onChange={(e) => setCookieText(e.target.value)}
               />
@@ -579,10 +588,10 @@ function YouTubeTab() {
                   onClick={() => uploadText.mutate(cookieText)}
                   disabled={!cookieText.trim() || uploadText.isPending}
                 >
-                  {uploadText.isPending ? 'Saving...' : 'Save'}
+                  {uploadText.isPending ? t('settings.youtube.saving') : t('settings.youtube.save')}
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => { setPasteMode(false); setCookieText(''); }}>
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
               </div>
             </div>

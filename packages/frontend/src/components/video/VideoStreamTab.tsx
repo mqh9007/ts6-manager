@@ -5,6 +5,7 @@
  */
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { VideoPlayer } from './VideoPlayer';
 import {
   useVideoStreamStatus,
@@ -20,15 +21,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
 const PRESETS = [
-  { value: '480p', label: '480p (854x480, 1 Mbps)' },
-  { value: '720p', label: '720p (1280x720, 2.5 Mbps)' },
-  { value: '1080p', label: '1080p (1920x1080, 4.5 Mbps)' },
+  { value: '480p', labelKey: 'video.presets.480p' },
+  { value: '720p', labelKey: 'video.presets.720p' },
+  { value: '1080p', labelKey: 'video.presets.1080p' },
 ];
 
 const FPS_OPTIONS = [
-  { value: '24', label: '24 FPS' },
-  { value: '30', label: '30 FPS' },
-  { value: '60', label: '60 FPS' },
+  { value: '24', labelKey: 'video.fps.24' },
+  { value: '30', labelKey: 'video.fps.30' },
+  { value: '60', labelKey: 'video.fps.60' },
 ];
 
 interface VideoStreamTabProps {
@@ -37,6 +38,7 @@ interface VideoStreamTabProps {
 }
 
 export function VideoStreamTab({ botId, botStatus }: VideoStreamTabProps) {
+  const { t } = useTranslation();
   const [sourceUrl, setSourceUrl] = useState('');
   const [preset, setPreset] = useState('720p');
   const [framerate, setFramerate] = useState('30');
@@ -87,11 +89,11 @@ export function VideoStreamTab({ botId, botStatus }: VideoStreamTabProps) {
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Video Stream</CardTitle>
+            <CardTitle className="text-base">{t('video.stream.title')}</CardTitle>
             {isStreaming && (
               <Badge variant="destructive" className="gap-1">
                 <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                LIVE
+                {t('video.live')}
               </Badge>
             )}
           </div>
@@ -99,17 +101,17 @@ export function VideoStreamTab({ botId, botStatus }: VideoStreamTabProps) {
         <CardContent className="space-y-4">
           {!isBotConnected && (
             <p className="text-sm text-muted-foreground">
-              Bot must be connected to start video streaming.
+              {t('video.botDisconnected')}
             </p>
           )}
 
           {isBotConnected && (
             <>
               <div className="space-y-2">
-                <Label>Source URL</Label>
+                <Label>{t('video.sourceUrl')}</Label>
                 <div className="flex gap-2">
                   <Input
-                    placeholder="https://youtube.com/watch?v=... or direct video URL"
+                    placeholder={t('video.sourceUrlPlaceholder')}
                     value={sourceUrl}
                     onChange={(e) => setSourceUrl(e.target.value)}
                     disabled={startStream.isPending}
@@ -121,19 +123,19 @@ export function VideoStreamTab({ botId, botStatus }: VideoStreamTabProps) {
                       variant="outline"
                       className="shrink-0"
                     >
-                      Switch
+                      {t('video.switch')}
                     </Button>
                   ) : null}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  YouTube, direct video URLs (MP4, HLS), or local file paths
+                  {t('video.sourceHint')}
                 </p>
               </div>
 
               {!isStreaming && (
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Quality Preset</Label>
+                    <Label>{t('video.qualityPreset')}</Label>
                     <div className="flex gap-2">
                       {PRESETS.map((p) => (
                         <Button
@@ -149,7 +151,7 @@ export function VideoStreamTab({ botId, botStatus }: VideoStreamTabProps) {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Frame Rate (FPS)</Label>
+                    <Label>{t('video.frameRate')}</Label>
                     <div className="flex gap-2">
                       {FPS_OPTIONS.map((fps) => (
                         <Button
@@ -158,20 +160,20 @@ export function VideoStreamTab({ botId, botStatus }: VideoStreamTabProps) {
                           size="sm"
                           onClick={() => setFramerate(fps.value)}
                         >
-                          {fps.label}
+                          {t(fps.labelKey)}
                         </Button>
                       ))}
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label>Video Bitrate</Label>
+                    <Label>{t('video.bitrate')}</Label>
                     <Input
                       value={bitrate}
                       onChange={(e) => setBitrate(e.target.value)}
-                      placeholder="e.g. 1500k, 2500k, 4500k"
+                      placeholder={t('video.bitrate.placeholder')}
                     />
                     <p className="text-xs text-muted-foreground">
-                      Examples: 1500k, 2500k, 4500k, 6000k
+                      {t('video.bitrate.examples')}
                     </p>
                   </div>
                 </div>
@@ -183,7 +185,7 @@ export function VideoStreamTab({ botId, botStatus }: VideoStreamTabProps) {
                     onClick={handleStart}
                     disabled={!sourceUrl.trim() || startStream.isPending}
                   >
-                    {startStream.isPending ? 'Starting...' : 'Start Stream'}
+                    {startStream.isPending ? t('video.starting') : t('video.start')}
                   </Button>
                 ) : (
                   <Button
@@ -191,7 +193,7 @@ export function VideoStreamTab({ botId, botStatus }: VideoStreamTabProps) {
                     variant="destructive"
                     disabled={stopStream.isPending}
                   >
-                    {stopStream.isPending ? 'Stopping...' : 'Stop Stream'}
+                    {stopStream.isPending ? t('video.stopping') : t('video.stop')}
                   </Button>
                 )}
               </div>
@@ -212,23 +214,23 @@ export function VideoStreamTab({ botId, botStatus }: VideoStreamTabProps) {
       {isBotConnected && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Live Preview</CardTitle>
+            <CardTitle className="text-base">{t('video.livePreview')}</CardTitle>
           </CardHeader>
           <CardContent>
             <VideoPlayer botId={botId} streaming={isStreaming} />
             {isStreaming && streamStatus && (
               <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
-                <span>Preset: <strong>{streamStatus.preset}</strong></span>
-                <span>FPS: <strong>{streamStatus.framerate}</strong></span>
-                <span>Bitrate: <strong>{streamStatus.bitrate}</strong></span>
+                <span>{t('video.status.preset')} <strong>{streamStatus.preset}</strong></span>
+                <span>{t('video.status.fps')} <strong>{streamStatus.framerate}</strong></span>
+                <span>{t('video.status.bitrate')} <strong>{streamStatus.bitrate}</strong></span>
                 {streamStatus.source && (
                   <span className="truncate max-w-xs">
-                    Source: <strong>{streamStatus.source}</strong>
+                    {t('video.status.source')} <strong>{streamStatus.source}</strong>
                   </span>
                 )}
                 {streamStatus.startedAt && (
                   <span>
-                    Uptime: <strong>{formatDuration(Date.now() - streamStatus.startedAt)}</strong>
+                    {t('video.status.uptime')} <strong>{formatDuration(Date.now() - streamStatus.startedAt)}</strong>
                   </span>
                 )}
               </div>
@@ -243,13 +245,13 @@ export function VideoStreamTab({ botId, botStatus }: VideoStreamTabProps) {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">
-                Viewers ({streamStatus.viewerCount})
+                {t('video.viewers', { count: streamStatus.viewerCount })}
               </CardTitle>
             </div>
           </CardHeader>
           <CardContent>
             {streamStatus.viewers.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No viewers connected</p>
+              <p className="text-sm text-muted-foreground">{t('video.noViewers')}</p>
             ) : (
               <div className="space-y-2">
                 {streamStatus.viewers.map((viewer: any) => {
@@ -265,7 +267,7 @@ export function VideoStreamTab({ botId, botStatus }: VideoStreamTabProps) {
                         <span className={`w-2 h-2 rounded-full ${
                           viewer.iceState === 'connected' ? 'bg-green-500' : 'bg-yellow-500'
                         }`} />
-                        <span className="text-sm">Client #{viewer.clid}</span>
+                        <span className="text-sm">{t('video.client')}#{viewer.clid}</span>
                         <span className="text-xs text-muted-foreground">
                           {mins > 0 ? `${mins}m ${secs}s` : `${secs}s`}
                         </span>
@@ -276,7 +278,7 @@ export function VideoStreamTab({ botId, botStatus }: VideoStreamTabProps) {
                         className="h-7 text-xs text-red-500 hover:text-red-400"
                         onClick={() => kickViewer.mutate({ botId, clid: viewer.clid })}
                       >
-                        Kick
+                        {t('video.kick')}
                       </Button>
                     </div>
                   );

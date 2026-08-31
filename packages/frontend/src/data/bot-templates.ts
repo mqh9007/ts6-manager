@@ -2,18 +2,18 @@ import { Clock, Users, Shield, Globe, Zap, MessageSquare, Moon, Timer, Megaphone
 
 export interface TemplateConfigField {
   key: string;
-  label: string;
+  labelKey: string;
   type: 'text' | 'number' | 'select';
   placeholder?: string;
   defaultValue?: string;
-  options?: { label: string; value: string }[];
+  options?: { labelKey: string; value: string }[];
   required?: boolean;
 }
 
 export interface BotTemplate {
   id: string;
-  name: string;
-  description: string;
+  nameKey: string;
+  descriptionKey: string;
   category: 'info-channels' | 'moderation' | 'automation' | 'integration';
   icon: React.ElementType;
   configFields: TemplateConfigField[];
@@ -25,6 +25,10 @@ const nid = () => `tpl_${++_id}`;
 const eid = () => `tpl_e${_id}`;
 
 function resetIds() { _id = 0; }
+
+// Build an option label key from template id, field key and option value
+const optKey = (tpl: string, field: string, value: string) =>
+  `templates.${tpl}.${field}.${value.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')}`;
 
 // Helper to build a simple linear flow
 function makeNode(id: string, type: string, label: string, config: Record<string, any>, x: number, y: number) {
@@ -38,22 +42,22 @@ export const BOT_TEMPLATES: BotTemplate[] = [
   // ===== INFO CHANNELS =====
   {
     id: 'clock-channel',
-    name: 'Clock Channel',
-    description: 'Updates a channel name with the current time every minute.',
+    nameKey: 'templates.clockChannel.name',
+    descriptionKey: 'templates.clockChannel.description',
     category: 'info-channels',
     icon: Clock,
     configFields: [
-      { key: 'channelId', label: 'Channel ID', type: 'number', placeholder: '42', required: true },
-      { key: 'timezone', label: 'Timezone', type: 'select', defaultValue: 'Europe/Berlin', options: [
-        { label: 'Europe/Berlin (CET/CEST)', value: 'Europe/Berlin' },
-        { label: 'Europe/London (GMT/BST)', value: 'Europe/London' },
-        { label: 'Europe/Paris (CET/CEST)', value: 'Europe/Paris' },
-        { label: 'Europe/Moscow (MSK)', value: 'Europe/Moscow' },
-        { label: 'America/New_York (EST/EDT)', value: 'America/New_York' },
-        { label: 'America/Chicago (CST/CDT)', value: 'America/Chicago' },
-        { label: 'America/Los_Angeles (PST/PDT)', value: 'America/Los_Angeles' },
-        { label: 'Asia/Tokyo (JST)', value: 'Asia/Tokyo' },
-        { label: 'UTC', value: 'UTC' },
+      { key: 'channelId', labelKey: 'templates.clockChannel.channelId.label', type: 'number', placeholder: '42', required: true },
+      { key: 'timezone', labelKey: 'templates.clockChannel.timezone.label', type: 'select', defaultValue: 'Europe/Berlin', options: [
+        { labelKey: optKey('clockChannel', 'timezone', 'Europe/Berlin'), value: 'Europe/Berlin' },
+        { labelKey: optKey('clockChannel', 'timezone', 'Europe/London'), value: 'Europe/London' },
+        { labelKey: optKey('clockChannel', 'timezone', 'Europe/Paris'), value: 'Europe/Paris' },
+        { labelKey: optKey('clockChannel', 'timezone', 'Europe/Moscow'), value: 'Europe/Moscow' },
+        { labelKey: optKey('clockChannel', 'timezone', 'America/New_York'), value: 'America/New_York' },
+        { labelKey: optKey('clockChannel', 'timezone', 'America/Chicago'), value: 'America/Chicago' },
+        { labelKey: optKey('clockChannel', 'timezone', 'America/Los_Angeles'), value: 'America/Los_Angeles' },
+        { labelKey: optKey('clockChannel', 'timezone', 'Asia/Tokyo'), value: 'Asia/Tokyo' },
+        { labelKey: optKey('clockChannel', 'timezone', 'UTC'), value: 'UTC' },
       ] },
     ],
     flowDataFactory: (cfg) => {
@@ -70,12 +74,12 @@ export const BOT_TEMPLATES: BotTemplate[] = [
   },
   {
     id: 'online-counter',
-    name: 'Online Counter',
-    description: 'Shows the current online client count in a channel name.',
+    nameKey: 'templates.onlineCounter.name',
+    descriptionKey: 'templates.onlineCounter.description',
     category: 'info-channels',
     icon: Users,
     configFields: [
-      { key: 'channelId', label: 'Channel ID', type: 'number', placeholder: '43', required: true },
+      { key: 'channelId', labelKey: 'templates.onlineCounter.channelId.label', type: 'number', placeholder: '43', required: true },
     ],
     flowDataFactory: (cfg) => {
       resetIds();
@@ -92,14 +96,14 @@ export const BOT_TEMPLATES: BotTemplate[] = [
   },
   {
     id: 'server-stats',
-    name: 'Server Stats',
-    description: 'Displays uptime, online clients, and channel count in three info channels.',
+    nameKey: 'templates.serverStats.name',
+    descriptionKey: 'templates.serverStats.description',
     category: 'info-channels',
     icon: Eye,
     configFields: [
-      { key: 'uptimeChannelId', label: 'Uptime Channel ID', type: 'number', placeholder: '44', required: true },
-      { key: 'clientsChannelId', label: 'Clients Channel ID', type: 'number', placeholder: '45', required: true },
-      { key: 'channelCountChannelId', label: 'Channel Count Channel ID', type: 'number', placeholder: '46', required: true },
+      { key: 'uptimeChannelId', labelKey: 'templates.serverStats.uptimeChannelId.label', type: 'number', placeholder: '44', required: true },
+      { key: 'clientsChannelId', labelKey: 'templates.serverStats.clientsChannelId.label', type: 'number', placeholder: '45', required: true },
+      { key: 'channelCountChannelId', labelKey: 'templates.serverStats.channelCountChannelId.label', type: 'number', placeholder: '46', required: true },
     ],
     flowDataFactory: (cfg) => {
       resetIds();
@@ -124,30 +128,30 @@ export const BOT_TEMPLATES: BotTemplate[] = [
 
   {
     id: 'animated-channel',
-    name: 'Animated Channel Name',
-    description: 'Animates a channel name with visual effects like scrolling marquee, typewriter, bounce, and more. Updates every 2-5 seconds.',
+    nameKey: 'templates.animatedChannel.name',
+    descriptionKey: 'templates.animatedChannel.description',
     category: 'info-channels',
     icon: Sparkles,
     configFields: [
-      { key: 'channelId', label: 'Channel ID', type: 'number', placeholder: '42', required: true },
-      { key: 'text', label: 'Display Text', type: 'text', placeholder: 'Welcome to MyServer', required: true },
-      { key: 'style', label: 'Animation Style', type: 'select', defaultValue: 'scroll', options: [
-        { label: 'Scroll Left (Marquee)', value: 'scroll' },
-        { label: 'Typewriter', value: 'typewriter' },
-        { label: 'Bounce', value: 'bounce' },
-        { label: 'Blink', value: 'blink' },
-        { label: 'Wave (Decorative)', value: 'wave' },
-        { label: 'Alternate Case', value: 'alternateCase' },
+      { key: 'channelId', labelKey: 'templates.animatedChannel.channelId.label', type: 'number', placeholder: '42', required: true },
+      { key: 'text', labelKey: 'templates.animatedChannel.text.label', type: 'text', placeholder: 'Welcome to MyServer', required: true },
+      { key: 'style', labelKey: 'templates.animatedChannel.style.label', type: 'select', defaultValue: 'scroll', options: [
+        { labelKey: optKey('animatedChannel', 'style', 'Scroll Left (Marquee)'), value: 'scroll' },
+        { labelKey: optKey('animatedChannel', 'style', 'Typewriter'), value: 'typewriter' },
+        { labelKey: optKey('animatedChannel', 'style', 'Bounce'), value: 'bounce' },
+        { labelKey: optKey('animatedChannel', 'style', 'Blink'), value: 'blink' },
+        { labelKey: optKey('animatedChannel', 'style', 'Wave (Decorative)'), value: 'wave' },
+        { labelKey: optKey('animatedChannel', 'style', 'Alternate Case'), value: 'alternateCase' },
       ] },
-      { key: 'intervalSeconds', label: 'Speed', type: 'select', defaultValue: '3', options: [
-        { label: 'Slow (5s)', value: '5' },
-        { label: 'Medium (3s)', value: '3' },
-        { label: 'Fast (2s)', value: '2' },
-        { label: 'Very Fast (1s)', value: '1' },
-        { label: 'Ultra (0.5s)', value: '0.5' },
-        { label: 'Insane (0.25s)', value: '0.25' },
+      { key: 'intervalSeconds', labelKey: 'templates.animatedChannel.intervalSeconds.label', type: 'select', defaultValue: '3', options: [
+        { labelKey: optKey('animatedChannel', 'intervalSeconds', 'Slow (5s)'), value: '5' },
+        { labelKey: optKey('animatedChannel', 'intervalSeconds', 'Medium (3s)'), value: '3' },
+        { labelKey: optKey('animatedChannel', 'intervalSeconds', 'Fast (2s)'), value: '2' },
+        { labelKey: optKey('animatedChannel', 'intervalSeconds', 'Very Fast (1s)'), value: '1' },
+        { labelKey: optKey('animatedChannel', 'intervalSeconds', 'Ultra (0.5s)'), value: '0.5' },
+        { labelKey: optKey('animatedChannel', 'intervalSeconds', 'Insane (0.25s)'), value: '0.25' },
       ] },
-      { key: 'prefix', label: 'Channel Name Prefix', type: 'text', placeholder: '[cspacer]', defaultValue: '[cspacer]' },
+      { key: 'prefix', labelKey: 'templates.animatedChannel.prefix.label', type: 'text', placeholder: '[cspacer]', defaultValue: '[cspacer]' },
     ],
     flowDataFactory: (cfg) => {
       resetIds();
@@ -170,13 +174,16 @@ export const BOT_TEMPLATES: BotTemplate[] = [
   // ===== AUTOMATION =====
   {
     id: 'welcome-message',
-    name: 'Welcome Message',
-    description: 'Sends a welcome message or poke when a client joins the server.',
+    nameKey: 'templates.welcomeMessage.name',
+    descriptionKey: 'templates.welcomeMessage.description',
     category: 'automation',
     icon: MessageSquare,
     configFields: [
-      { key: 'message', label: 'Welcome Message', type: 'text', placeholder: 'Welcome {{event.client_nickname}}!', required: true },
-      { key: 'usePokeInstead', label: 'Delivery Method', type: 'select', defaultValue: 'message', options: [{ label: 'Private Message', value: 'message' }, { label: 'Poke', value: 'poke' }] },
+      { key: 'message', labelKey: 'templates.welcomeMessage.message.label', type: 'text', placeholder: 'Welcome {{event.client_nickname}}!', required: true },
+      { key: 'usePokeInstead', labelKey: 'templates.welcomeMessage.usePokeInstead.label', type: 'select', defaultValue: 'message', options: [
+        { labelKey: optKey('welcomeMessage', 'usePokeInstead', 'Private Message'), value: 'message' },
+        { labelKey: optKey('welcomeMessage', 'usePokeInstead', 'Poke'), value: 'poke' },
+      ] },
     ],
     flowDataFactory: (cfg) => {
       resetIds();
@@ -199,14 +206,14 @@ export const BOT_TEMPLATES: BotTemplate[] = [
   },
   {
     id: 'support-system',
-    name: 'Support System',
-    description: 'Notifies admins when a client joins the support channel.',
+    nameKey: 'templates.supportSystem.name',
+    descriptionKey: 'templates.supportSystem.description',
     category: 'automation',
     icon: Megaphone,
     configFields: [
-      { key: 'supportChannelId', label: 'Support Channel ID', type: 'number', placeholder: '15', required: true },
-      { key: 'adminGroupId', label: 'Admin Group ID', type: 'number', placeholder: '6', required: true },
-      { key: 'message', label: 'Notification Message', type: 'text', placeholder: 'Support needed by {{event.client_nickname}}!' },
+      { key: 'supportChannelId', labelKey: 'templates.supportSystem.supportChannelId.label', type: 'number', placeholder: '15', required: true },
+      { key: 'adminGroupId', labelKey: 'templates.supportSystem.adminGroupId.label', type: 'number', placeholder: '6', required: true },
+      { key: 'message', labelKey: 'templates.supportSystem.message.label', type: 'text', placeholder: 'Support needed by {{event.client_nickname}}!' },
     ],
     flowDataFactory: (cfg) => {
       resetIds();
@@ -228,13 +235,13 @@ export const BOT_TEMPLATES: BotTemplate[] = [
   },
   {
     id: 'temp-channel-creator',
-    name: 'Temp Channel Creator',
-    description: 'Creates a temporary channel when a client joins a lobby channel, then moves them in. Channel is auto-deleted when empty.',
+    nameKey: 'templates.tempChannelCreator.name',
+    descriptionKey: 'templates.tempChannelCreator.description',
     category: 'automation',
     icon: FolderPlus,
     configFields: [
-      { key: 'lobbyChannelId', label: 'Lobby Channel ID', type: 'number', placeholder: '20', required: true },
-      { key: 'parentChannelId', label: 'Parent Channel ID', type: 'number', placeholder: '19', required: true },
+      { key: 'lobbyChannelId', labelKey: 'templates.tempChannelCreator.lobbyChannelId.label', type: 'number', placeholder: '20', required: true },
+      { key: 'parentChannelId', labelKey: 'templates.tempChannelCreator.parentChannelId.label', type: 'number', placeholder: '19', required: true },
     ],
     flowDataFactory: (cfg) => {
       resetIds();
@@ -264,13 +271,17 @@ export const BOT_TEMPLATES: BotTemplate[] = [
   },
   {
     id: 'auto-rank',
-    name: 'Auto-Rank',
-    description: 'Automatically assigns server groups based on cumulative online time.',
+    nameKey: 'templates.autoRank.name',
+    descriptionKey: 'templates.autoRank.description',
     category: 'automation',
     icon: Award,
     configFields: [
-      { key: 'ranks', label: 'Ranks (JSON)', type: 'text', placeholder: '[{"hours":10,"groupId":"7"},{"hours":50,"groupId":"8"}]', required: true },
-      { key: 'pollInterval', label: 'Check Interval', type: 'select', defaultValue: '*/5 * * * *', options: [{ label: 'Every 5 min', value: '*/5 * * * *' }, { label: 'Every 15 min', value: '*/15 * * * *' }, { label: 'Every hour', value: '0 * * * *' }] },
+      { key: 'ranks', labelKey: 'templates.autoRank.ranks.label', type: 'text', placeholder: '[{"hours":10,"groupId":"7"},{"hours":50,"groupId":"8"}]', required: true },
+      { key: 'pollInterval', labelKey: 'templates.autoRank.pollInterval.label', type: 'select', defaultValue: '*/5 * * * *', options: [
+        { labelKey: optKey('autoRank', 'pollInterval', 'Every 5 min'), value: '*/5 * * * *' },
+        { labelKey: optKey('autoRank', 'pollInterval', 'Every 15 min'), value: '*/15 * * * *' },
+        { labelKey: optKey('autoRank', 'pollInterval', 'Every hour'), value: '0 * * * *' },
+      ] },
     ],
     flowDataFactory: (cfg) => {
       resetIds();
@@ -286,8 +297,8 @@ export const BOT_TEMPLATES: BotTemplate[] = [
   },
   {
     id: 'last-seen-tracker',
-    name: 'Last-Seen Tracker',
-    description: 'Records the last-seen timestamp when a client disconnects.',
+    nameKey: 'templates.lastSeenTracker.name',
+    descriptionKey: 'templates.lastSeenTracker.description',
     category: 'automation',
     icon: Clock,
     configFields: [],
@@ -308,14 +319,14 @@ export const BOT_TEMPLATES: BotTemplate[] = [
   // ===== MODERATION =====
   {
     id: 'afk-mover',
-    name: 'AFK Mover',
-    description: 'Moves idle clients to an AFK channel after a configurable timeout.',
+    nameKey: 'templates.afkMover.name',
+    descriptionKey: 'templates.afkMover.description',
     category: 'moderation',
     icon: Moon,
     configFields: [
-      { key: 'afkChannelId', label: 'AFK Channel ID', type: 'number', placeholder: '10', required: true },
-      { key: 'idleThresholdSeconds', label: 'Idle Threshold (seconds)', type: 'number', placeholder: '300', required: true },
-      { key: 'exemptGroupIds', label: 'Exempt Group IDs (comma-separated)', type: 'text', placeholder: '6,7' },
+      { key: 'afkChannelId', labelKey: 'templates.afkMover.afkChannelId.label', type: 'number', placeholder: '10', required: true },
+      { key: 'idleThresholdSeconds', labelKey: 'templates.afkMover.idleThresholdSeconds.label', type: 'number', placeholder: '300', required: true },
+      { key: 'exemptGroupIds', labelKey: 'templates.afkMover.exemptGroupIds.label', type: 'text', placeholder: '6,7' },
     ],
     flowDataFactory: (cfg) => {
       resetIds();
@@ -331,14 +342,14 @@ export const BOT_TEMPLATES: BotTemplate[] = [
   },
   {
     id: 'idle-kicker',
-    name: 'Idle Kicker',
-    description: 'Kicks clients that have been idle for too long.',
+    nameKey: 'templates.idleKicker.name',
+    descriptionKey: 'templates.idleKicker.description',
     category: 'moderation',
     icon: Timer,
     configFields: [
-      { key: 'idleThresholdSeconds', label: 'Idle Threshold (seconds)', type: 'number', placeholder: '1800', required: true },
-      { key: 'reason', label: 'Kick Reason', type: 'text', placeholder: 'Idle timeout' },
-      { key: 'exemptGroupIds', label: 'Exempt Group IDs (comma-separated)', type: 'text', placeholder: '6,7' },
+      { key: 'idleThresholdSeconds', labelKey: 'templates.idleKicker.idleThresholdSeconds.label', type: 'number', placeholder: '1800', required: true },
+      { key: 'reason', labelKey: 'templates.idleKicker.reason.label', type: 'text', placeholder: 'Idle timeout' },
+      { key: 'exemptGroupIds', labelKey: 'templates.idleKicker.exemptGroupIds.label', type: 'text', placeholder: '6,7' },
     ],
     flowDataFactory: (cfg) => {
       resetIds();
@@ -354,13 +365,13 @@ export const BOT_TEMPLATES: BotTemplate[] = [
   },
   {
     id: 'bad-name-checker',
-    name: 'Bad Name Checker',
-    description: 'Kicks clients whose nickname contains forbidden words.',
+    nameKey: 'templates.badNameChecker.name',
+    descriptionKey: 'templates.badNameChecker.description',
     category: 'moderation',
     icon: Shield,
     configFields: [
-      { key: 'badWords', label: 'Bad Words (comma-separated)', type: 'text', placeholder: 'admin,moderator,test', required: true },
-      { key: 'reason', label: 'Kick Reason', type: 'text', placeholder: 'Forbidden nickname' },
+      { key: 'badWords', labelKey: 'templates.badNameChecker.badWords.label', type: 'text', placeholder: 'admin,moderator,test', required: true },
+      { key: 'reason', labelKey: 'templates.badNameChecker.reason.label', type: 'text', placeholder: 'Forbidden nickname' },
     ],
     flowDataFactory: (cfg) => {
       resetIds();
@@ -388,14 +399,17 @@ export const BOT_TEMPLATES: BotTemplate[] = [
   },
   {
     id: 'group-protector',
-    name: 'Group Protector',
-    description: 'Kicks clients who have a protected group but lack the required authorization group.',
+    nameKey: 'templates.groupProtector.name',
+    descriptionKey: 'templates.groupProtector.description',
     category: 'moderation',
     icon: Shield,
     configFields: [
-      { key: 'protectedGroupId', label: 'Protected Group ID', type: 'number', placeholder: '8', required: true },
-      { key: 'allowedGroupId', label: 'Authorized Group ID', type: 'number', placeholder: '10', required: true },
-      { key: 'action', label: 'Action', type: 'select', defaultValue: 'kick', options: [{ label: 'Kick', value: 'kick' }, { label: 'Remove Group', value: 'remove' }] },
+      { key: 'protectedGroupId', labelKey: 'templates.groupProtector.protectedGroupId.label', type: 'number', placeholder: '8', required: true },
+      { key: 'allowedGroupId', labelKey: 'templates.groupProtector.allowedGroupId.label', type: 'number', placeholder: '10', required: true },
+      { key: 'action', labelKey: 'templates.groupProtector.action.label', type: 'select', defaultValue: 'kick', options: [
+        { labelKey: optKey('groupProtector', 'action', 'Kick'), value: 'kick' },
+        { labelKey: optKey('groupProtector', 'action', 'Remove Group'), value: 'remove' },
+      ] },
     ],
     flowDataFactory: (cfg) => {
       resetIds();
@@ -423,13 +437,13 @@ export const BOT_TEMPLATES: BotTemplate[] = [
   // ===== INTEGRATION =====
   {
     id: 'webhook-server-message',
-    name: 'Webhook → Server Message',
-    description: 'Receives a webhook POST and broadcasts the message to the TeamSpeak server. Great for monitoring alerts, CI/CD notifications, or Discord bridges.',
+    nameKey: 'templates.webhookServerMessage.name',
+    descriptionKey: 'templates.webhookServerMessage.description',
     category: 'integration',
     icon: Webhook,
     configFields: [
-      { key: 'path', label: 'Webhook Path', type: 'text', placeholder: 'server-notify', required: true },
-      { key: 'secret', label: 'Secret (optional)', type: 'text', placeholder: 'my-secret-key' },
+      { key: 'path', labelKey: 'templates.webhookServerMessage.path.label', type: 'text', placeholder: 'server-notify', required: true },
+      { key: 'secret', labelKey: 'templates.webhookServerMessage.secret.label', type: 'text', placeholder: 'my-secret-key' },
     ],
     flowDataFactory: (cfg) => {
       resetIds();
@@ -445,14 +459,14 @@ export const BOT_TEMPLATES: BotTemplate[] = [
   },
   {
     id: 'webhook-group-assign',
-    name: 'Webhook → Assign Group',
-    description: 'External system (e.g. website verification) sends a webhook with a client database ID to assign a server group. Use for website-to-TS3 user verification.',
+    nameKey: 'templates.webhookGroupAssign.name',
+    descriptionKey: 'templates.webhookGroupAssign.description',
     category: 'integration',
     icon: Webhook,
     configFields: [
-      { key: 'path', label: 'Webhook Path', type: 'text', placeholder: 'verify-user', required: true },
-      { key: 'groupId', label: 'Server Group ID to assign', type: 'text', placeholder: '42', required: true },
-      { key: 'secret', label: 'Secret (optional)', type: 'text', placeholder: 'my-secret-key' },
+      { key: 'path', labelKey: 'templates.webhookGroupAssign.path.label', type: 'text', placeholder: 'verify-user', required: true },
+      { key: 'groupId', labelKey: 'templates.webhookGroupAssign.groupId.label', type: 'text', placeholder: '42', required: true },
+      { key: 'secret', labelKey: 'templates.webhookGroupAssign.secret.label', type: 'text', placeholder: 'my-secret-key' },
     ],
     flowDataFactory: (cfg) => {
       resetIds();
@@ -469,15 +483,15 @@ export const BOT_TEMPLATES: BotTemplate[] = [
   },
   {
     id: 'webhook-channel-rename',
-    name: 'Webhook → Update Channel',
-    description: 'Receives a webhook and updates a channel name. Use for external status displays like game server status, stream status, or monitoring dashboards.',
+    nameKey: 'templates.webhookChannelRename.name',
+    descriptionKey: 'templates.webhookChannelRename.description',
     category: 'integration',
     icon: Webhook,
     configFields: [
-      { key: 'path', label: 'Webhook Path', type: 'text', placeholder: 'update-status', required: true },
-      { key: 'channelId', label: 'Channel ID to update', type: 'text', placeholder: '42', required: true },
-      { key: 'nameTemplate', label: 'Channel Name Template', type: 'text', placeholder: '[STATUS] {{event.webhook_body.status}}', required: true },
-      { key: 'secret', label: 'Secret (optional)', type: 'text', placeholder: 'my-secret-key' },
+      { key: 'path', labelKey: 'templates.webhookChannelRename.path.label', type: 'text', placeholder: 'update-status', required: true },
+      { key: 'channelId', labelKey: 'templates.webhookChannelRename.channelId.label', type: 'text', placeholder: '42', required: true },
+      { key: 'nameTemplate', labelKey: 'templates.webhookChannelRename.nameTemplate.label', type: 'text', placeholder: '[STATUS] {{event.webhook_body.status}}', required: true },
+      { key: 'secret', labelKey: 'templates.webhookChannelRename.secret.label', type: 'text', placeholder: 'my-secret-key' },
     ],
     flowDataFactory: (cfg) => {
       resetIds();
@@ -493,13 +507,16 @@ export const BOT_TEMPLATES: BotTemplate[] = [
   },
   {
     id: 'anti-vpn',
-    name: 'Anti-VPN',
-    description: 'Checks connecting clients against a VPN detection API and kicks/bans VPN users.',
+    nameKey: 'templates.antiVpn.name',
+    descriptionKey: 'templates.antiVpn.description',
     category: 'integration',
     icon: Globe,
     configFields: [
-      { key: 'apiUrl', label: 'API URL (use {{ip}} placeholder)', type: 'text', placeholder: 'https://vpnapi.io/api/{{ip}}?key=YOUR_KEY', required: true },
-      { key: 'action', label: 'Action for VPN', type: 'select', defaultValue: 'kick', options: [{ label: 'Kick', value: 'kick' }, { label: 'Ban (1h)', value: 'ban' }] },
+      { key: 'apiUrl', labelKey: 'templates.antiVpn.apiUrl.label', type: 'text', placeholder: 'https://vpnapi.io/api/{{ip}}?key=YOUR_KEY', required: true },
+      { key: 'action', labelKey: 'templates.antiVpn.action.label', type: 'select', defaultValue: 'kick', options: [
+        { labelKey: optKey('antiVpn', 'action', 'Kick'), value: 'kick' },
+        { labelKey: optKey('antiVpn', 'action', 'Ban (1h)'), value: 'ban' },
+      ] },
     ],
     flowDataFactory: (cfg) => {
       resetIds();
@@ -529,8 +546,8 @@ export const BOT_TEMPLATES: BotTemplate[] = [
 ];
 
 export const TEMPLATE_CATEGORIES = [
-  { id: 'info-channels', label: 'Info Channels', description: 'Dynamic channel names with live data' },
-  { id: 'moderation', label: 'Moderation', description: 'Automated moderation and protection' },
-  { id: 'automation', label: 'Automation', description: 'Welcome messages, temp channels, ranking' },
-  { id: 'integration', label: 'Integration', description: 'External APIs and webhooks' },
+  { id: 'info-channels', labelKey: 'templates.categories.infoChannels.label', descriptionKey: 'templates.categories.infoChannels.description' },
+  { id: 'moderation', labelKey: 'templates.categories.moderation.label', descriptionKey: 'templates.categories.moderation.description' },
+  { id: 'automation', labelKey: 'templates.categories.automation.label', descriptionKey: 'templates.categories.automation.description' },
+  { id: 'integration', labelKey: 'templates.categories.integration.label', descriptionKey: 'templates.categories.integration.description' },
 ] as const;

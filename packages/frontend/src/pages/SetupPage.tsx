@@ -6,8 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Loader2, AlertCircle, ShieldCheck } from 'lucide-react';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 
 export default function SetupPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -37,7 +39,7 @@ export default function SetupPage() {
     setError('');
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('auth.setup.passwordMismatch'));
       return;
     }
 
@@ -50,7 +52,7 @@ export default function SetupPage() {
       });
       navigate('/login', { replace: true });
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Setup failed');
+      setError(err.response?.data?.error || t('auth.setup.failed'));
     } finally {
       setLoading(false);
     }
@@ -65,20 +67,20 @@ export default function SetupPage() {
           <div className="inline-flex items-center justify-center h-14 w-14 rounded-xl bg-primary/10 border border-primary/20 mb-4">
             <ShieldCheck className="h-7 w-7 text-primary" />
           </div>
-          <h1 className="text-xl font-semibold text-foreground">Initial Setup</h1>
-          <p className="text-sm text-muted-foreground mt-1">Create your administrator account</p>
+          <h1 className="text-xl font-semibold text-foreground">{t('auth.setup.title')}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{t('auth.setup.subtitle')}</p>
         </div>
 
         <Card className="border-border/50 backdrop-blur-sm">
           <CardHeader className="pb-4">
             <h2 className="text-sm font-medium text-center text-muted-foreground">
-              This is the first time setup. Create an admin account to get started.
+              {t('auth.setup.firstTimePrompt')}
             </h2>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="username" className="text-xs">Username</Label>
+                <Label htmlFor="username" className="text-xs">{t('auth.username')}</Label>
                 <Input
                   id="username"
                   value={username}
@@ -89,7 +91,7 @@ export default function SetupPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="displayName" className="text-xs">Display Name</Label>
+                <Label htmlFor="displayName" className="text-xs">{t('auth.displayName')}</Label>
                 <Input
                   id="displayName"
                   value={displayName}
@@ -99,24 +101,24 @@ export default function SetupPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-xs">Password</Label>
+                <Label htmlFor="password" className="text-xs">{t('auth.password')}</Label>
                 <Input
                   id="password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Min. 8 chars, uppercase, lowercase, digit"
+                  placeholder={t('auth.setup.passwordPlaceholder')}
                   autoComplete="new-password"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword" className="text-xs">Confirm Password</Label>
+                <Label htmlFor="confirmPassword" className="text-xs">{t('auth.setup.confirmPassword')}</Label>
                 <Input
                   id="confirmPassword"
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Repeat password"
+                  placeholder={t('auth.setup.repeatPassword')}
                   autoComplete="new-password"
                 />
               </div>
@@ -136,10 +138,10 @@ export default function SetupPage() {
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Creating account...
+                    {t('auth.setup.creating')}
                   </>
                 ) : (
-                  'Create Admin Account'
+                  t('auth.setup.submit')
                 )}
               </Button>
             </form>

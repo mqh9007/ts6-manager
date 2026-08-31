@@ -13,6 +13,7 @@ import { ChevronDown, ChevronUp, ChevronsUpDown, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -23,8 +24,9 @@ interface DataTableProps<TData, TValue> {
 }
 
 export function DataTable<TData, TValue>({
-  columns, data, searchKey, searchPlaceholder = 'Search...', pageSize = 20,
+  columns, data, searchKey, searchPlaceholder, pageSize = 20,
 }: DataTableProps<TData, TValue>) {
+  const { t } = useTranslation();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
 
@@ -47,7 +49,7 @@ export function DataTable<TData, TValue>({
         <div className="relative max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder={searchPlaceholder}
+            placeholder={searchPlaceholder || t('common.search')}
             value={globalFilter}
             onChange={(e) => setGlobalFilter(e.target.value)}
             className="pl-8 h-9"
@@ -102,7 +104,7 @@ export function DataTable<TData, TValue>({
             ) : (
               <tr>
                 <td colSpan={columns.length} className="h-24 text-center text-muted-foreground">
-                  No results.
+                  {t('common.noResults')}
                 </td>
               </tr>
             )}
@@ -113,17 +115,17 @@ export function DataTable<TData, TValue>({
       {table.getPageCount() > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-xs text-muted-foreground">
-            {table.getFilteredRowModel().rows.length} result(s)
+            {t('pagination.results', { count: table.getFilteredRowModel().rows.length })}
           </p>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
-              Previous
+              {t('common.previous')}
             </Button>
             <span className="text-xs text-muted-foreground font-mono-data">
-              {table.getState().pagination.pageIndex + 1} / {table.getPageCount()}
+              {t('pagination.page', { page: table.getState().pagination.pageIndex + 1, total: table.getPageCount() })}
             </span>
             <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
-              Next
+              {t('common.next')}
             </Button>
           </div>
         </div>

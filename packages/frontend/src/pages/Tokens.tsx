@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { tokensApi } from '@/api/bans.api';
 import { useServerStore } from '@/stores/server.store';
@@ -11,6 +12,7 @@ import { type ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
 
 export default function Tokens() {
+  const { t } = useTranslation();
   const { selectedConfigId: c, selectedSid: s } = useServerStore();
   const { data, isLoading } = useQuery({ queryKey: ['tokens', c, s], queryFn: () => tokensApi.list(c!, s!), enabled: !!c && !!s });
   const qc = useQueryClient();
@@ -19,29 +21,29 @@ export default function Tokens() {
   const tokens = useMemo(() => (Array.isArray(data) ? data : []), [data]);
 
   const columns: ColumnDef<any>[] = useMemo(() => [
-    { accessorKey: 'token', header: 'Token', cell: ({ getValue }) => (
+    { accessorKey: 'token', header: t('tokens.col.token'), cell: ({ getValue }) => (
       <div className="flex items-center gap-1">
         <span className="font-mono-data text-xs truncate max-w-[200px]">{getValue() as string}</span>
-        <button onClick={() => { navigator.clipboard.writeText(getValue() as string); toast.success('Copied'); }} className="p-1 hover:bg-muted rounded"><Copy className="h-3 w-3 text-muted-foreground" /></button>
+        <button onClick={() => { navigator.clipboard.writeText(getValue() as string); toast.success(t('tokens.copied')); }} className="p-1 hover:bg-muted rounded"><Copy className="h-3 w-3 text-muted-foreground" /></button>
       </div>
     )},
-    { accessorKey: 'token_type', header: 'Type', cell: ({ getValue }) => <span className="text-xs">{(getValue() as number) === 0 ? 'Server Group' : 'Channel Group'}</span> },
-    { accessorKey: 'token_id1', header: 'Group ID', cell: ({ getValue }) => <span className="font-mono-data text-xs">{getValue() as number}</span> },
-    { accessorKey: 'token_description', header: 'Description', cell: ({ getValue }) => <span className="text-xs">{(getValue() as string) || '-'}</span> },
+    { accessorKey: 'token_type', header: t('tokens.col.type'), cell: ({ getValue }) => <span className="text-xs">{(getValue() as number) === 0 ? t('tokens.type.serverGroup') : t('tokens.type.channelGroup')}</span> },
+    { accessorKey: 'token_id1', header: t('tokens.col.groupId'), cell: ({ getValue }) => <span className="font-mono-data text-xs">{getValue() as number}</span> },
+    { accessorKey: 'token_description', header: t('tokens.col.description'), cell: ({ getValue }) => <span className="text-xs">{(getValue() as string) || '-'}</span> },
     { id: 'actions', header: '', cell: ({ row }) => (
-      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteToken.mutate(row.original.token, { onSuccess: () => toast.success('Token deleted') })}>
+      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteToken.mutate(row.original.token, { onSuccess: () => toast.success(t('tokens.deleted')) })}>
         <Trash2 className="h-3.5 w-3.5" />
       </Button>
     )},
-  ], [deleteToken]);
+  ], [deleteToken, t]);
 
-  if (!c || !s) return <EmptyState icon={KeyRound} title="No server selected" />;
+  if (!c || !s) return <EmptyState icon={KeyRound} title={t('tokens.noServer')} />;
   if (isLoading) return <PageLoader />;
 
   return (
     <div className="space-y-5">
-      <h1 className="text-xl font-semibold">Privilege Keys</h1>
-      <DataTable columns={columns} data={tokens} searchKey="token_description" searchPlaceholder="Search tokens..." />
+      <h1 className="text-xl font-semibold">{t('tokens.title')}</h1>
+      <DataTable columns={columns} data={tokens} searchKey="token_description" searchPlaceholder={t('tokens.search')} />
     </div>
   );
 }

@@ -3,11 +3,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useServers, useVirtualServers } from '@/hooks/use-servers';
 import { useServerStore } from '@/stores/server.store';
 import { Server } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export function ServerSelector() {
   const { selectedConfigId, selectedSid, setServer, setSid } = useServerStore();
   const { data: servers } = useServers();
   const { data: virtualServers } = useVirtualServers();
+  const { t } = useTranslation();
 
   // Auto-select first server if none selected
   useEffect(() => {
@@ -31,7 +33,7 @@ export function ServerSelector() {
         onValueChange={(v) => setServer(parseInt(v))}
       >
         <SelectTrigger className="w-[180px] h-8 text-xs">
-          <SelectValue placeholder="Select server..." />
+          <SelectValue placeholder={t('server.selector.server')} />
         </SelectTrigger>
         <SelectContent>
           {servers?.map((s: any) => (
@@ -50,7 +52,7 @@ export function ServerSelector() {
             onValueChange={(v) => setSid(parseInt(v))}
           >
             <SelectTrigger className="w-[160px] h-8 text-xs">
-              <SelectValue placeholder="Virtual server..." />
+              <SelectValue placeholder={t('server.selector.virtualServer')} />
             </SelectTrigger>
             <SelectContent>
               {virtualServers.map((vs: any) => (
