@@ -16,6 +16,7 @@ import { useRadioStations, useRadioPresets, useCreateRadioStation, useDeleteRadi
 import { usePlaylists, usePlaylist, useCreatePlaylist, useDeletePlaylist, useAddSongToPlaylist, useRemoveSongFromPlaylist } from '@/hooks/use-playlists';
 import { useServers } from '@/hooks/use-servers';
 import { useServerStore } from '@/stores/server.store';
+import { useAuthStore } from '@/stores/auth.store';
 import { PageLoader } from '@/components/shared/LoadingSpinner';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
@@ -1701,6 +1702,8 @@ function QueueTab() {
 
 export default function MusicBots() {
   const { t } = useTranslation();
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === 'admin';
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -1718,7 +1721,7 @@ export default function MusicBots() {
           <TabsTrigger value="library"><FileAudio className="h-3.5 w-3.5 mr-1.5" /> {t('music.bots.library')}</TabsTrigger>
           <TabsTrigger value="playlists"><ListMusic className="h-3.5 w-3.5 mr-1.5" /> {t('music.bots.playlists')}</TabsTrigger>
           <TabsTrigger value="radio"><Radio className="h-3.5 w-3.5 mr-1.5" /> {t('music.bots.radio')}</TabsTrigger>
-          <TabsTrigger value="sources"><SettingsIcon className="h-3.5 w-3.5 mr-1.5" /> {t('music.bots.sources')}</TabsTrigger>
+          {isAdmin && <TabsTrigger value="sources"><SettingsIcon className="h-3.5 w-3.5 mr-1.5" /> {t('music.bots.sources')}</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="bots"><BotsTab /></TabsContent>
@@ -1727,7 +1730,7 @@ export default function MusicBots() {
         <TabsContent value="library"><LibraryTab /></TabsContent>
         <TabsContent value="playlists"><PlaylistsTab /></TabsContent>
         <TabsContent value="radio"><RadioTab /></TabsContent>
-        <TabsContent value="sources"><MusicSourcesTab /></TabsContent>
+        {isAdmin && <TabsContent value="sources"><MusicSourcesTab /></TabsContent>}
       </Tabs>
     </div>
   );
