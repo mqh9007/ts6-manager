@@ -263,7 +263,7 @@ When a music bot is connected to a channel, users in that channel can control it
 |---------|-------------|
 | `!radio` | List available radio stations |
 | `!radio <id>` | Play a radio station |
-| `!play <url>` | Play from YouTube URL |
+| `!play <song name or url>` | Search and play a configured music source, or play from a YouTube URL |
 | `!play` | Resume paused playback |
 | `!stop` | Stop playback |
 | `!pause` | Toggle pause/resume |

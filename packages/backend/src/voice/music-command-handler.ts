@@ -3,8 +3,10 @@ import { VoiceBotManager } from './voice-bot-manager.js';
 import type { VoiceBot } from './voice-bot.js';
 import type { QueueItem } from './playlist/queue.js';
 import { downloadYouTube } from './audio/youtube.js';
+import { MusicSourceService } from './music-sources/music-source-service.js';
+import { config } from '../config.js';
 
-const MUSIC_DIR = process.env.MUSIC_DIR || '/data/music';
+const MUSIC_DIR = config.musicDir;
 const CMD_PREFIX = '!';
 
 const MUSIC_COMMANDS = new Set([
@@ -72,7 +74,7 @@ export class MusicCommandHandler {
           await this.handleRadio(botId, bot, userClid, args);
           break;
         case 'play':
-          await this.handlePlay(bot, userClid, args);
+          await this.handlePlay(botId, bot, userClid, args);
           break;
         case 'stop':
           this.handleStop(bot, userClid);
@@ -176,25 +178,40 @@ export class MusicCommandHandler {
     this.reply(bot, userClid, `Now playing: ${station.name}`);
   }
 
-  private async handlePlay(bot: VoiceBot, userClid: number, args: string): Promise<void> {
+  private async handlePlay(botId: number, bot: VoiceBot, userClid: number, args: string): Promise<void> {
     if (!args) {
       if (bot.status === 'paused') {
         bot.resume();
         this.reply(bot, userClid, 'Resumed.');
         return;
       }
-      this.reply(bot, userClid, 'Usage: !play <youtube-url>');
-      return;
-    }
-
-    if (!args.startsWith('http://') && !args.startsWith('https://')) {
-      this.reply(bot, userClid, 'Please provide a valid URL. Usage: !play <url>');
+      this.reply(bot, userClid, 'Usage: !play <song name or URL>');
       return;
     }
 
     this.reply(bot, userClid, 'Loading...');
 
     try {
+      if (!args.startsWith('http://') && !args.startsWith('https://')) {
+        const sourceService = new MusicSourceService(this.prisma);
+        const results = await sourceService.search(args);
+        const song = results[0];
+        if (!song) throw new Error('No matching song found');
+        const streamUrl = await sourceService.resolve(song);
+        const { filePath } = await downloadYouTube(streamUrl, MUSIC_DIR);
+        const queueItem: QueueItem = {
+          id: `source_${botId}_${Date.now()}`,
+          title: song.title,
+          artist: song.artist,
+          duration: song.duration || undefined,
+          filePath,
+          source: 'music-source',
+          sourceUrl: streamUrl,
+        };
+        await this.enqueueOrPlay(bot, userClid, queueItem);
+        return;
+      }
+
       const { filePath, info } = await downloadYouTube(args, MUSIC_DIR);
 
       const queueItem: QueueItem = {
@@ -207,21 +224,21 @@ export class MusicCommandHandler {
         sourceUrl: args,
       };
 
-      bot.queue.add(queueItem);
-
-      // Save to MusicRequest history
-      this.saveMusicRequest(bot, queueItem);
-
-      // If something is already playing, queue it instead of interrupting
-      if (bot.status === 'playing' || bot.status === 'paused') {
-        this.reply(bot, userClid, `Queued: ${info.artist} - ${info.title} (position #${bot.queue.length})`);
-      } else {
-        bot.queue.playAt(bot.queue.length - 1);
-        await bot.play(queueItem);
-        this.reply(bot, userClid, `Now playing: ${info.artist} - ${info.title}`);
-      }
+      await this.enqueueOrPlay(bot, userClid, queueItem);
     } catch (err: any) {
       this.reply(bot, userClid, `Failed to play: ${err.message}`);
+    }
+  }
+
+  private async enqueueOrPlay(bot: VoiceBot, userClid: number, queueItem: QueueItem): Promise<void> {
+    bot.queue.add(queueItem);
+    this.saveMusicRequest(bot, queueItem);
+    if (bot.status === 'playing' || bot.status === 'paused') {
+      this.reply(bot, userClid, `Queued: ${queueItem.artist ? `${queueItem.artist} - ` : ''}${queueItem.title} (position #${bot.queue.length})`);
+    } else {
+      bot.queue.playAt(bot.queue.length - 1);
+      await bot.play(queueItem);
+      this.reply(bot, userClid, `Now playing: ${queueItem.artist ? `${queueItem.artist} - ` : ''}${queueItem.title}`);
     }
   }
 

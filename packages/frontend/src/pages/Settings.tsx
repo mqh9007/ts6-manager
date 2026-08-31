@@ -18,6 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { Settings as SettingsIcon, Users, Server, Plus, Trash2, Pencil, TestTube, Check, X, Lock, KeyRound, Youtube, Upload, FileText } from 'lucide-react';
 import { toast } from 'sonner';
+import { MusicSourcesTab } from '@/components/settings/MusicSourcesTab';
 
 export default function Settings() {
   const { user } = useAuthStore();
@@ -33,6 +34,7 @@ export default function Settings() {
           <TabsTrigger value="account"><Lock className="h-3.5 w-3.5 mr-1" /> Account</TabsTrigger>
           {isAdmin && <TabsTrigger value="users"><Users className="h-3.5 w-3.5 mr-1" /> Users</TabsTrigger>}
           {isAdmin && <TabsTrigger value="youtube"><Youtube className="h-3.5 w-3.5 mr-1" /> YouTube</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="music-sources"><SettingsIcon className="h-3.5 w-3.5 mr-1" /> Music Sources</TabsTrigger>}
         </TabsList>
 
         {isAdmin && (
@@ -54,6 +56,12 @@ export default function Settings() {
         {isAdmin && (
           <TabsContent value="youtube" className="mt-4">
             <YouTubeTab />
+          </TabsContent>
+        )}
+
+        {isAdmin && (
+          <TabsContent value="music-sources" className="mt-4">
+            <MusicSourcesTab />
           </TabsContent>
         )}
       </Tabs>
