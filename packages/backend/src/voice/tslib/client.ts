@@ -15,20 +15,20 @@ import {
   DUMMY_NONCE,
   INIT_VERSION,
   hashPassword,
-} from "./crypto.ts";
+} from "./crypto.js";
 import {
   IdentityData,
   exportPublicKeyString,
   getSharedSecret,
-} from "./identity.ts";
+} from "./identity.js";
 import {
   parseLicense,
   deriveLicenseKey,
   getSharedSecret2,
   generateTemporaryKey,
-} from "./license.ts";
-import { buildCommand, parseCommand, type ParsedCommand } from "./commands.ts";
-import { qlzDecompress } from "./quicklz.ts";
+} from "./license.js";
+import { buildCommand, parseCommand, type ParsedCommand } from "./commands.js";
+import { qlzDecompress } from "./quicklz.js";
 
 // Packet types
 export const enum PacketType {

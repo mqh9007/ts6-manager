@@ -1,5 +1,5 @@
 import { workerData, parentPort } from 'worker_threads';
-import { generateIdentity } from './identity.ts';
+import { generateIdentity } from './identity.js';
 
 const { securityLevel } = workerData as { securityLevel: number };
 const identity = generateIdentity(securityLevel);

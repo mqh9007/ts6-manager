@@ -101,7 +101,7 @@ async function searchNetease(query: string): Promise<MusicSearchResult[]> {
       body: new URLSearchParams({ s: query, type: '1', offset: '0', total: 'true', limit: '10' }),
     });
     if (!response.ok) throw new Error(`NetEase search returned HTTP ${response.status}`);
-    const data = await response.json();
+    const data: any = await response.json();
     if (!Array.isArray(data?.result?.songs)) throw new Error('NetEase search returned no results');
     return data.result.songs.map((item: any) => ({
       title: String(item.name || ''), artist: Array.isArray(item.artists) ? item.artists.map((artist: any) => artist.name).join('、') : 'Unknown', duration: Math.round(Number(item.duration || 0) / 1000), platform: 'wy' as const,

@@ -3,7 +3,7 @@ import { Worker } from "worker_threads";
 import { fileURLToPath } from "url";
 import path from "path";
 import fs from "fs";
-import { sha1, xorInto } from "./crypto.ts";
+import { sha1, xorInto } from "./crypto.js";
 
 // Static obfuscation key used by TS3 identity export
 const OBFUSCATION_KEY = Buffer.from(
@@ -216,7 +216,7 @@ export function generateIdentity(securityLevel: number = 8): IdentityData {
 export function generateIdentityAsync(securityLevel: number = 8): Promise<IdentityData> {
   return new Promise((resolve, reject) => {
     const workerDir = path.dirname(fileURLToPath(import.meta.url));
-    const tsWorkerPath = path.join(workerDir, "identity-worker.ts");
+    const tsWorkerPath = path.join(workerDir, "identity-worker.js");
     const jsWorkerPath = path.join(workerDir, "identity-worker.js");
     const useTsWorker = fs.existsSync(tsWorkerPath) && !fs.existsSync(jsWorkerPath);
     const workerPath = useTsWorker ? tsWorkerPath : jsWorkerPath;

@@ -1,6 +1,6 @@
 import vm from 'node:vm';
 
-type LxRequestOptions = { method?: string; headers?: Record<string, string>; body?: BodyInit; timeout?: number };
+type LxRequestOptions = { method?: string; headers?: Record<string, string>; body?: any; timeout?: number };
 type LxRequestResult = { url: string; ok: boolean; statusCode?: number; error?: string };
 
 function safeUrl(input: string): URL {
