@@ -13,7 +13,7 @@ services:
       - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
       - TS_ALLOW_SELF_SIGNED=${TS_ALLOW_SELF_SIGNED:-false}
       - YT_COOKIE_FILE=${YT_COOKIE_FILE:-}
-      - JWT_ACCESS_EXPIRY=15m
+      - JWT_ACCESS_EXPIRY=1d
       - JWT_REFRESH_EXPIRY=7d
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
       - MUSIC_DIR=/data/music

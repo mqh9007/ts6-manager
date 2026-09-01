@@ -234,7 +234,7 @@ The Docker images handle migrations automatically on startup.
 | `ENCRYPTION_KEY` | — | Optional. Dedicated key for AES-256-GCM credential encryption. Falls back to `JWT_SECRET` if not set. |
 | `PORT` | `3001` | Backend port |
 | `DATABASE_URL` | `file:./data/ts6webui.db` | SQLite database path |
-| `JWT_ACCESS_EXPIRY` | `15m` | Access token lifetime |
+| `JWT_ACCESS_EXPIRY` | `1d` | Access token lifetime |
 | `JWT_REFRESH_EXPIRY` | `7d` | Refresh token lifetime |
 | `FRONTEND_URL` | `http://localhost:3000` | CORS origin |
 | `MUSIC_DIR` | `/data/music` | Directory for downloaded music files |

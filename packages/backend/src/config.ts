@@ -17,7 +17,7 @@ export const config = {
   nodeEnv: process.env.NODE_ENV || 'development',
   databaseUrl: process.env.DATABASE_URL || 'file:./data/ts6webui.db',
   jwtSecret: process.env.JWT_SECRET || 'dev-secret-change-me-in-production',
-  jwtAccessExpiry: process.env.JWT_ACCESS_EXPIRY || '15m',
+  jwtAccessExpiry: process.env.JWT_ACCESS_EXPIRY || '1d',
   jwtRefreshExpiry: process.env.JWT_REFRESH_EXPIRY || '7d',
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
   tsAllowSelfSigned: process.env.TS_ALLOW_SELF_SIGNED === 'true' || process.env.TS_ALLOW_SELF_SIGNED === '1',
