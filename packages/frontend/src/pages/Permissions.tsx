@@ -16,6 +16,8 @@ import {
   X, Check, Minus,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { officialPermissionDescriptions } from '@/data/permission-descriptions';
+import { officialChinesePermissionDescriptions } from '@/data/official-permission-descriptions';
 
 // Permission category keys for i18n lookup
 const PERM_CATEGORY_KEYS: Record<string, string> = {
@@ -114,11 +116,16 @@ function translateDescription(description: string) {
 }
 
 function getPermissionDescription(perm: PermDef, language: string) {
-  if (language.toLowerCase().startsWith('en')) return perm.permdesc || perm.permsid;
+  const official = officialPermissionDescriptions[perm.permid];
+  if (language.toLowerCase().startsWith('en')) return official?.en || perm.permdesc || perm.permsid;
+  if (official?.zh) return official.zh;
+  if (officialChinesePermissionDescriptions[perm.permsid]) return officialChinesePermissionDescriptions[perm.permsid];
   if (perm.permdesc) return translateDescription(perm.permdesc);
   const name = perm.permsid;
   if (name.startsWith('i_needed_modify_power_')) {
     const target = name.slice('i_needed_modify_power_'.length);
+    const targetDescription = officialChinesePermissionDescriptions[`b_${target}`] || officialChinesePermissionDescriptions[`i_${target}`];
+    if (targetDescription) return `修改“${targetDescription}”所需的权限等级`;
     return `修改「${target.split('_').map((part) => permissionTerms[part] || part).join('')}」所需的权限等级`;
   }
   const translated = name.replace(/^[bi]_/, '').split('_').filter(Boolean).map((part) => permissionTerms[part] || part).join('');

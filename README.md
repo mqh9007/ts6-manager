@@ -263,7 +263,7 @@ When a music bot is connected to a channel, users in that channel can control it
 |---------|-------------|
 | `!radio` | List available radio stations |
 | `!radio <id>` | Play a radio station |
-| `!bv <url>` | Play audio from a Bilibili BV/b23.tv link |
+| `!bv <BV号或url>` | Play audio from a Bilibili BV ID, BV link, or b23.tv link |
 | `!play <song name>` | Search and play a configured music source |
 | `!play` | Resume paused playback |
 | `!stop` | Stop playback |

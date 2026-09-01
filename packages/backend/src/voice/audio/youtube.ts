@@ -134,10 +134,15 @@ export function downloadYouTube(url: string, outputDir: string): Promise<{ fileP
 
 /** Download audio from a Bilibili video URL using yt-dlp. */
 export function downloadBilibili(url: string, outputDir: string): Promise<{ filePath: string; info: YouTubeInfo }> {
-  if (!/^https?:\/\/(?:www\.)?(?:bilibili\.com\/video\/BV[\w]+|b23\.tv\/)[^\s]*$/i.test(url)) {
-    return Promise.reject(new Error('Only Bilibili BV links are supported (https://www.bilibili.com/video/BV...)'));
+  const input = url.trim();
+  const bvMatch = input.match(/^BV[0-9A-Za-z]{8,}$/i);
+  const normalizedUrl = bvMatch
+    ? `https://www.bilibili.com/video/${bvMatch[0]}`
+    : input;
+  if (!/^https?:\/\/(?:www\.)?(?:bilibili\.com\/video\/BV[0-9A-Za-z]+|b23\.tv\/)[^\s]*$/i.test(normalizedUrl)) {
+    return Promise.reject(new Error('Only a Bilibili BV ID or link is supported (BVxxxxxx / https://www.bilibili.com/video/BV...)'));
   }
-  return downloadYouTube(url, outputDir);
+  return downloadYouTube(normalizedUrl, outputDir);
 }
 
 /**
