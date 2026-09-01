@@ -46,6 +46,10 @@ export function useCreateServerGroup() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['server-groups'] }),
   });
 }
+export function useCopyServerGroup() {
+  const qc = useQueryClient(); const { selectedConfigId: c, selectedSid: s } = useServerStore();
+  return useMutation({ mutationFn: ({ sgid, name }: { sgid: number; name: string }) => groupsApi.copyServerGroup(c!, s!, sgid, name), onSuccess: () => qc.invalidateQueries({ queryKey: ['server-groups'] }) });
+}
 
 export function useDeleteServerGroup() {
   const qc = useQueryClient();
@@ -63,6 +67,10 @@ export function useChannelGroupMembers(cgid: number | null, cid: number | null) 
 export function useCreateChannelGroup() {
   const qc = useQueryClient(); const { selectedConfigId: c, selectedSid: s } = useServerStore();
   return useMutation({ mutationFn: (name: string) => groupsApi.createChannelGroup(c!, s!, name), onSuccess: () => qc.invalidateQueries({ queryKey: ['channel-groups'] }) });
+}
+export function useCopyChannelGroup() {
+  const qc = useQueryClient(); const { selectedConfigId: c, selectedSid: s } = useServerStore();
+  return useMutation({ mutationFn: ({ cgid, name }: { cgid: number; name: string }) => groupsApi.copyChannelGroup(c!, s!, cgid, name), onSuccess: () => qc.invalidateQueries({ queryKey: ['channel-groups'] }) });
 }
 export function useAddChannelGroupMember() {
   const qc = useQueryClient(); const { selectedConfigId: c, selectedSid: s } = useServerStore();

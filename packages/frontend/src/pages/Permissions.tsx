@@ -51,6 +51,80 @@ interface PermDef {
   permdesc: string;
 }
 
+const permissionTerms: Record<string, string> = {
+  serverinstance: '服务器实例', virtualserver: '虚拟服务器', serverquery: '服务器查询', channel: '频道', client: '客户端',
+  group: '组', permission: '权限', help: '帮助', info: '信息', list: '列表', search: '搜索', create: '创建', delete: '删除',
+  start: '启动', stop: '停止', modify: '修改', manage: '管理', view: '查看', send: '发送', add: '添加', remove: '移除',
+  join: '加入', password: '密码', name: '名称', description: '描述', topic: '主题', banner: '横幅', icon: '图标', log: '日志',
+  channelgroup: '频道组', servergroup: '服务器组', power: '权限等级', needed: '所需', own: '自己的', ignore: '忽略', temporary: '临时',
+  permanent: '永久', semi: '半永久', file: '文件', directory: '目录', upload: '上传', download: '下载', overview: '概览',
+  textmessage: '文字消息', licensesign: '许可证签名', machine: '服务器机器', template: '模板', binding: '网络绑定',
+  connectioninfo: '连接信息', canonical: '规范名称', antiflood: '防刷屏', codec: '编解码器', encryption: '加密',
+  encryption_mode: '加密模式', maxclients: '最大客户端数', maxfamilyclients: '最大子频道客户端数', sortorder: '排序',
+  welcomemessage: '欢迎消息', reserved: '预留名额', port: '端口', autostart: '自动启动', nickname: '昵称', integration: '集成',
+  avatar: '头像', complain: '投诉', ban: '封禁', kick: '踢出', move: '移动', talk: '发言', poke: '戳一戳', whisper: '私聊',
+  quota: '配额', quotas: '配额', filesize: '文件大小', storage: '存储空间', max: '最大', idletime: '空闲时间', clones: '连接数',
+  subscription: '订阅', subscriptions: '订阅数', talker: '发言者', sticky: '固定频道', reserved_slots: '预留名额',
+};
+
+const descriptionTranslations: Array<[string, string]> = [
+  ['Retrieve information about ServerQuery commands', '查看 ServerQuery 命令帮助'],
+  ['Retrieve global server information', '查看服务器实例信息'],
+  ['List virtual servers stored in the database', '查看数据库中的虚拟服务器列表'],
+  ['List active IP bindings on multi-homed machines', '查看服务器机器上的网络绑定'],
+  ['List permissions available available on the server instance', '查看服务器实例支持的权限列表'],
+  ['Search permission assignments by name or ID', '按名称或 ID 搜索权限分配'],
+  ['List server query logins', '查看 ServerQuery 登录账号列表'],
+  ['Login to ServerQuery', '登录 ServerQuery'],
+  ['Send text messages to all virtual servers at once', '向所有虚拟服务器发送文字消息'],
+  ['Retrieve global server log', '查看服务器全局日志'],
+  ['Write to global server log', '写入服务器全局日志'],
+  ['Shutdown the server process', '关闭服务器进程'],
+  ['Find permissions', '搜索权限'],
+  ['List clients online on a virtual server', '查看虚拟服务器中的在线客户端'],
+  ['List client identities known by the virtual server', '查看虚拟服务器中的客户端身份列表'],
+  ['Retrieve client information', '查看客户端信息'],
+  ['Create virtual servers', '创建虚拟服务器'],
+  ['Delete virtual servers', '删除虚拟服务器'],
+  ['Start own virtual server', '启动自己的虚拟服务器'],
+  ['Stop own virtual server', '停止自己的虚拟服务器'],
+  ['Start any virtual server in the server instance', '启动服务器实例中的任意虚拟服务器'],
+  ['Stop any virtual server in the server instance', '停止服务器实例中的任意虚拟服务器'],
+];
+
+function translateDescription(description: string) {
+  const exact = descriptionTranslations.find(([source]) => source === description);
+  if (exact) return exact[1];
+  let result = description;
+  const replacements: Array<[RegExp, string]> = [
+    [/Retrieve information about /, '查看'], [/Retrieve /, '查看'], [/List /, '查看'], [/Search /, '搜索'],
+    [/Create /, '创建'], [/Delete /, '删除'], [/Start /, '启动'], [/Stop /, '停止'], [/Shutdown /, '关闭'],
+    [/Modify /, '修改'], [/Edit /, '编辑'], [/Manage /, '管理'], [/Send /, '发送'], [/Write /, '写入'],
+    [/Join /, '加入'], [/Ignore /, '忽略'], [/Allow /, '允许'], [/Change /, '修改'], [/Make /, '设为'],
+    [/virtual server/gi, '虚拟服务器'], [/server instance/gi, '服务器实例'], [/ServerQuery/gi, 'ServerQuery'],
+    [/clients?/gi, '客户端'], [/channels?/gi, '频道'], [/channel groups?/gi, '频道组'], [/server groups?/gi, '服务器组'],
+    [/permissions?/gi, '权限'], [/permission assignments?/gi, '权限分配'], [/information/gi, '信息'], [/available/gi, '可用的'],
+    [/database/gi, '数据库'], [/password/gi, '密码'], [/settings?/gi, '设置'], [/power/gi, '权限等级'],
+    [/own/gi, '自己的'], [/global/gi, '全局'], [/online/gi, '在线'], [/list/gi, '列表'], [/log/gi, '日志'],
+    [/text messages?/gi, '文字消息'], [/file transfers?/gi, '文件传输'], [/file/gi, '文件'], [/directory/gi, '目录'],
+    [/with a /gi, '，使用'], [/with /gi, '，使用'], [/ and /gi, '和'], [/ to /gi, ''],
+  ];
+  for (const [pattern, replacement] of replacements) result = result.replace(pattern, replacement);
+  return result.replace(/\s+/g, ' ').replace(/\s+([，。])/g, '$1').trim();
+}
+
+function getPermissionDescription(perm: PermDef, language: string) {
+  if (language.toLowerCase().startsWith('en')) return perm.permdesc || perm.permsid;
+  if (perm.permdesc) return translateDescription(perm.permdesc);
+  const name = perm.permsid;
+  if (name.startsWith('i_needed_modify_power_')) {
+    const target = name.slice('i_needed_modify_power_'.length);
+    return `修改「${target.split('_').map((part) => permissionTerms[part] || part).join('')}」所需的权限等级`;
+  }
+  const translated = name.replace(/^[bi]_/, '').split('_').filter(Boolean).map((part) => permissionTerms[part] || part).join('');
+  return name.startsWith('b_') ? `允许${translated}` : (translated || perm.permdesc || perm.permsid);
+}
+
 interface PermValue {
   permsid: string;
   permvalue: number;
@@ -75,6 +149,7 @@ const LAYER_KEYS: { key: PermLayer; labelKey: string; icon: React.ElementType }[
 
 export default function Permissions() {
   const { t } = useTranslation();
+  const { i18n } = useTranslation();
   const { selectedConfigId: c, selectedSid: s } = useServerStore();
   const qc = useQueryClient();
 
@@ -396,7 +471,7 @@ export default function Permissions() {
                         <div className="ml-4 border-l border-border/50 pl-2">
                           {/* Header */}
                           <div className="grid grid-cols-12 gap-2 px-2 py-1 text-[10px] text-muted-foreground uppercase tracking-wider">
-                            <div className="col-span-5">{t('permissions.col.name')}</div>
+                            <div className="col-span-5">{t('permissions.col.name')} / {t('permissions.col.description')}</div>
                             <div className="col-span-2 text-center">{t('permissions.col.value')}</div>
                             <div className="col-span-1 text-center">{t('permissions.col.skip')}</div>
                             <div className="col-span-1 text-center">{t('permissions.col.negate')}</div>
@@ -417,8 +492,9 @@ export default function Permissions() {
                                   isSet ? 'text-foreground' : 'text-muted-foreground',
                                 )}
                               >
-                                <div className="col-span-5 truncate" title={perm.permdesc || perm.permsid}>
-                                  <span className="font-mono-data text-[11px]">{perm.permsid}</span>
+                                <div className="col-span-5 min-w-0" title={perm.permdesc || perm.permsid}>
+                                  <div className="font-mono-data text-[11px] truncate">{perm.permsid}</div>
+                                  <div className="text-[10px] leading-4 text-muted-foreground/80 truncate">{getPermissionDescription(perm, i18n.language)}</div>
                                 </div>
                                 <div className="col-span-2 flex justify-center">
                                   {isBoolean ? (

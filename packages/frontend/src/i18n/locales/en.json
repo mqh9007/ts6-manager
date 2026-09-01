@@ -163,7 +163,11 @@
       "dialog": {
         "create": "Create Server Group",
         "nameLabel": "Group Name",
-        "namePlaceholder": "New Group"
+        "namePlaceholder": "New Group",
+        "templateLabel": "Permission template",
+        "emptyTemplate": "Empty group",
+        "emptyTemplateHint": "Create the group without importing permissions",
+        "templateHint": "Copy all permissions from the selected built-in template"
       },
       "groupsCount": "Groups ({{count}})",
       "members": "Members",
@@ -179,7 +183,8 @@
       "title": "Server Groups",
       "toast": {
         "created": "Group created",
-        "deleted": "Group deleted"
+        "deleted": "Group deleted",
+        "templateFailed": "Group created, but some template permissions could not be imported"
       }
     }
   },
@@ -223,6 +228,7 @@
     },
     "col": {
       "name": "Permission",
+      "description": "Description",
       "negate": "Negate",
       "skip": "Skip",
       "value": "Value"

@@ -17,6 +17,8 @@ export const groupsApi = {
     api.put(`${sgBase(configId, sid)}/${sgid}`, { name }).then((r) => r.data),
   serverGroupMembers: (configId: number, sid: number, sgid: number) =>
     api.get(`${sgBase(configId, sid)}/${sgid}/members`).then((r) => r.data),
+  copyServerGroup: (configId: number, sid: number, sgid: number, name: string) =>
+    api.post(`${sgBase(configId, sid)}/${sgid}/copy`, { tsgid: 0, type: 1, name }).then((r) => r.data),
   addServerGroupMember: (configId: number, sid: number, sgid: number, cldbid: number) =>
     api.post(`${sgBase(configId, sid)}/${sgid}/members`, { cldbid }).then((r) => r.data),
   removeServerGroupMember: (configId: number, sid: number, sgid: number, cldbid: number) =>
@@ -27,6 +29,8 @@ export const groupsApi = {
   // Channel groups
   channelGroups: (configId: number, sid: number) =>
     api.get(cgBase(configId, sid)).then((r) => r.data),
+  copyChannelGroup: (configId: number, sid: number, cgid: number, name: string) =>
+    api.post(`${cgBase(configId, sid)}/${cgid}/copy`, { tcgid: 0, type: 1, name }).then((r) => r.data),
   channelGroupMembers: (configId: number, sid: number, cgid: number, cid: number) => api.get(`${cgBase(configId, sid)}/${cgid}/clients`, { params: { cid } }).then((r) => r.data),
   addChannelGroupMember: (configId: number, sid: number, cgid: number, cldbid: number, cid: number) => api.post(`${cgBase(configId, sid)}/${cgid}/assign`, { cldbid, cid }).then((r) => r.data),
   removeChannelGroupMember: (configId: number, sid: number, cgid: number, cldbid: number, cid: number) => api.post(`${cgBase(configId, sid)}/${cgid}/assign`, { cgid: 0, cldbid, cid }).then((r) => r.data),

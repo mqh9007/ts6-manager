@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useServerGroups, useServerGroupMembers, useCreateServerGroup, useDeleteServerGroup, useAddServerGroupMember, useRemoveServerGroupMember } from '@/hooks/use-groups';
+import { useServerGroups, useServerGroupMembers, useCreateServerGroup, useCopyServerGroup, useDeleteServerGroup, useAddServerGroupMember, useRemoveServerGroupMember } from '@/hooks/use-groups';
 import { useClientDatabase, useClients } from '@/hooks/use-clients';
 import { useServerStore } from '@/stores/server.store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,6 +22,7 @@ export default function ServerGroups() {
   const { selectedConfigId, selectedSid } = useServerStore();
   const { data, isLoading } = useServerGroups();
   const createGroup = useCreateServerGroup();
+  const copyGroup = useCopyServerGroup();
   const deleteGroup = useDeleteServerGroup();
   const addMember = useAddServerGroupMember(); const removeMember = useRemoveServerGroupMember();
   const { data: databaseClients } = useClientDatabase(); const { data: onlineClients } = useClients();
@@ -32,18 +33,27 @@ export default function ServerGroups() {
   const [showCreate, setShowCreate] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ sgid: number; name: string } | null>(null);
   const [newName, setNewName] = useState('');
+  const [templateKey, setTemplateKey] = useState('');
 
   if (!selectedConfigId || !selectedSid) return <EmptyState icon={Shield} title={t('groups.server.noServer')} />;
   if (isLoading) return <PageLoader />;
 
   // Type 0 groups are built-in templates; only show manageable groups.
-  const groups = (Array.isArray(data) ? data : []).filter((g: any) => Number(g.type) !== 0);
+  const allGroups = Array.isArray(data) ? data : [];
+  const groups = allGroups.filter((g: any) => Number(g.type) !== 0);
+  const templates = allGroups.filter((g: any) => Number(g.type) === 0);
   const onlineDbids = new Set((Array.isArray(onlineClients) ? onlineClients : []).map((c: any) => Number(c.client_database_id || c.cldbid)));
   const databaseClientList = Array.isArray(databaseClients)
     ? databaseClients
     : (databaseClients as any)?.clients || (databaseClients as any)?.clientdb || (databaseClients as any)?.client_database || [];
   const availableClients = (Array.isArray(databaseClientList) ? databaseClientList : []).slice().sort((a: any, b: any) => Number(onlineDbids.has(Number(b.cldbid))) - Number(onlineDbids.has(Number(a.cldbid))));
   const memberIds = new Set((Array.isArray(members) ? members : []).map((m: any) => Number(m.cldbid)));
+
+  const handleCreate = () => {
+    const onSuccess = () => { toast.success(t('groups.server.toast.created')); setShowCreate(false); setNewName(''); setTemplateKey(''); };
+    if (templateKey) copyGroup.mutate({ sgid: Number(templateKey), name: newName }, { onSuccess });
+    else createGroup.mutate(newName, { onSuccess });
+  };
 
   return (
     <div className="space-y-5">
@@ -148,9 +158,10 @@ export default function ServerGroups() {
         <DialogContent>
           <DialogHeader><DialogTitle>{t('groups.server.dialog.create')}</DialogTitle></DialogHeader>
           <div><Label className="text-xs">{t('groups.server.dialog.nameLabel')}</Label><Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder={t('groups.server.dialog.namePlaceholder')} autoFocus /></div>
+          <div><Label className="text-xs">{t('groups.server.dialog.templateLabel')}</Label><select className="mt-1 h-9 w-full rounded-md border bg-background px-3 text-sm" value={templateKey} onChange={(e) => setTemplateKey(e.target.value)}><option value="">{t('groups.server.dialog.emptyTemplate')}</option>{templates.map((template: any) => <option key={template.sgid} value={template.sgid}>{template.name}</option>)}</select><p className="mt-1 text-xs text-muted-foreground">{templateKey ? t('groups.server.dialog.templateHint') : t('groups.server.dialog.emptyTemplateHint')}</p></div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCreate(false)}>{t('common.cancel')}</Button>
-            <Button onClick={() => { createGroup.mutate(newName, { onSuccess: () => { toast.success(t('groups.server.toast.created')); setShowCreate(false); setNewName(''); } }); }}>{t('groups.server.dialog.create')}</Button>
+            <Button disabled={!newName.trim() || createGroup.isPending || copyGroup.isPending} onClick={handleCreate}>{t('groups.server.dialog.create')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

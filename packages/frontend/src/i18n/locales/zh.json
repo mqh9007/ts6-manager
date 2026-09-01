@@ -163,7 +163,11 @@
       "dialog": {
         "create": "创建服务器组",
         "nameLabel": "组名称",
-        "namePlaceholder": "新建组"
+        "namePlaceholder": "新建组",
+        "templateLabel": "权限模板",
+        "emptyTemplate": "空白组",
+        "emptyTemplateHint": "创建组但不导入任何权限",
+        "templateHint": "复制所选内置模板的全部权限"
       },
       "groupsCount": "组（{{count}}）",
       "members": "成员",
@@ -179,7 +183,8 @@
       "title": "服务器组",
       "toast": {
         "created": "组已创建",
-        "deleted": "组已删除"
+        "deleted": "组已删除",
+        "templateFailed": "组已创建，但部分模板权限导入失败"
       }
     }
   },
@@ -223,6 +228,7 @@
     },
     "col": {
       "name": "权限",
+      "description": "描述",
       "negate": "取反",
       "skip": "跳过",
       "value": "值"
