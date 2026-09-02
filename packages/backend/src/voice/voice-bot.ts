@@ -11,21 +11,35 @@ import { getVideoCookieArgs, getVideoPlatform } from './audio/video-source.js';
 import { spawn } from 'child_process';
 
 /** Resolve a YouTube/yt-dlp-compatible URL to a direct stream URL */
-function resolveVideoUrl(url: string, maxHeight: number = 720): Promise<string> {
+type ResolvedVideoSource = { video: string; audio?: string };
+function resolveVideoUrl(url: string, maxHeight: number = 720): Promise<ResolvedVideoSource> {
+  const trimmedUrl = url.trim();
+  const bvMatch = trimmedUrl.match(/^BV[0-9A-Za-z]{8,}$/i);
+  const normalizedUrl = bvMatch ? `https://www.bilibili.com/video/${bvMatch[0]}` : trimmedUrl;
   // Only resolve YouTube and other yt-dlp-supported sites
-  if (!url.includes('youtube.com/') && !url.includes('youtu.be/') && !url.includes('twitch.tv/') && !url.includes('bilibili.com/') && !url.includes('b23.tv/')) {
-    return Promise.resolve(url);
+  if (!normalizedUrl.includes('youtube.com/') && !normalizedUrl.includes('youtu.be/') && !normalizedUrl.includes('twitch.tv/') && !normalizedUrl.includes('bilibili.com/') && !normalizedUrl.includes('b23.tv/')) {
+    return Promise.resolve({ video: normalizedUrl });
   }
 
   return new Promise((resolve, reject) => {
     // Request best combined format (video+audio) up to the target height
-    const formatFilter = `best[height<=${maxHeight}][ext=mp4]/best[height<=${maxHeight}]/best[ext=mp4]/best`;
+    const isBilibili = /bilibili\.com|b23\.tv/i.test(normalizedUrl);
+    // Bilibili often does not expose a combined MP4 format. Keep the
+    // YouTube-friendly preference for other platforms, but allow any usable
+    // Bilibili format instead of rejecting the source before Sidecar starts.
+    const formatFilter = isBilibili
+      ? `bestvideo[height<=${maxHeight}]+bestaudio/bestvideo+bestaudio/best`
+      : `best[height<=${maxHeight}][ext=mp4]/best[height<=${maxHeight}]/best[ext=mp4]/best`;
+    const platformHeaders = isBilibili
+      ? ['--add-header', 'Referer:https://www.bilibili.com/', '--add-header', 'User-Agent:Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36']
+      : [];
     const proc = spawn('yt-dlp', [
-      ...getVideoCookieArgs(getVideoPlatform(url)),
+      ...getVideoCookieArgs(getVideoPlatform(normalizedUrl)),
+      ...platformHeaders,
       '-f', formatFilter,
       '--no-playlist',
       '-g',  // print direct URL only
-      url,
+      normalizedUrl,
     ], { shell: false });
 
     let stdout = '';
@@ -37,13 +51,14 @@ function resolveVideoUrl(url: string, maxHeight: number = 720): Promise<string> 
       if (code !== 0) {
         return reject(new Error(`yt-dlp failed (code ${code}): ${stderr.slice(0, 200)}`));
       }
-      // yt-dlp -g returns the direct URL(s), take the first one
-      const directUrl = stdout.trim().split('\n')[0];
+      // DASH formats return video and audio URLs on separate lines.
+      const directUrls = stdout.trim().split(/\r?\n/).filter(Boolean);
+      const directUrl = directUrls[0];
       if (!directUrl) {
         return reject(new Error('yt-dlp returned no URL'));
       }
-      console.log(`[VideoResolve] Resolved: ${url.substring(0, 60)}... → direct URL`);
-      resolve(directUrl);
+      console.log(`[VideoResolve] Resolved: ${normalizedUrl.substring(0, 60)}... → direct URL`);
+      resolve({ video: directUrl, audio: directUrls[1] });
     });
 
     proc.on('error', (err) => {
@@ -862,11 +877,12 @@ export class VoiceBot extends EventEmitter {
     // Resolve YouTube/streaming URLs via yt-dlp, then start ffmpeg
     const resolvedSource = await resolveVideoUrl(source, presetConfig.height);
     await this.sidecarHttp.setSource(
-      resolvedSource,
+      resolvedSource.video,
       presetConfig.width,
       presetConfig.height,
       effectiveFramerate,
       effectiveBitrate,
+      resolvedSource.audio,
     );
 
     console.log(`[VoiceBot ${this.config.id}] Video stream started: ${stream.id}, source: ${source}`);
@@ -928,11 +944,12 @@ export class VoiceBot extends EventEmitter {
     const resolvedSource = await resolveVideoUrl(source, currentPreset.height);
 
     await this.sidecarHttp.setSource(
-      resolvedSource,
+      resolvedSource.video,
       currentPreset.width,
       currentPreset.height,
       this._videoFramerate,
       this._videoBitrate,
+      resolvedSource.audio,
     );
     console.log(`[VoiceBot ${this.config.id}] Video source changed: ${source}`);
     this.emit('videoSourceChanged', source);

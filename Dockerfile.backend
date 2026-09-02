@@ -18,6 +18,8 @@ WORKDIR /app
 
 # Copy everything at once to avoid BuildKit ordering bug on Windows
 FROM base AS build
+ARG APP_VERSION=dev
+ENV APP_VERSION=${APP_VERSION}
 COPY . .
 RUN pnpm install --no-frozen-lockfile
 RUN pnpm --filter @ts6/common run build
@@ -26,6 +28,8 @@ RUN pnpm --filter @ts6/backend run build
 
 # Production image
 FROM base AS production
+ARG APP_VERSION=dev
+ENV APP_VERSION=${APP_VERSION}
 ENV NODE_ENV=production
 WORKDIR /app
 

@@ -13,6 +13,7 @@ import fs from 'fs';
 import path from 'path';
 
 async function main() {
+  console.log(`version: ${process.env.APP_VERSION || 'dev'}`);
   // C1: JWT secret startup guard
   if (config.jwtSecret === 'dev-secret-change-me-in-production') {
     if (config.nodeEnv === 'production') {

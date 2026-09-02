@@ -1,10 +1,11 @@
 # syntax=docker/dockerfile:1.4
 FROM golang:1.22-bookworm AS build
+ARG APP_VERSION=dev
 WORKDIR /src
 COPY packages/sidecar/go.mod packages/sidecar/go.sum ./
 RUN go mod download
 COPY packages/sidecar/main.go .
-RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /sidecar main.go
+RUN CGO_ENABLED=0 go build -ldflags="-s -w -X main.buildVersion=${APP_VERSION}" -o /sidecar main.go
 
 FROM debian:bookworm-slim
 RUN apt-get update && \

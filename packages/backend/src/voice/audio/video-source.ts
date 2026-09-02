@@ -35,7 +35,29 @@ export function getVideoCookieArgs(platform: VideoPlatform = 'youtube'): string[
   const args: string[] = ["--remote-components", "ejs:github"];
   const cookieFile = videoCookieFiles.get(platform);
   if (cookieFile) {
-    args.push("--cookies", cookieFile);
+    try {
+      const cookieText = fs.readFileSync(cookieFile, 'utf8').trim();
+      // Browser extensions can export either Netscape cookies.txt or a raw
+      // Cookie request header. Convert the latter to Netscape format because
+      // recent yt-dlp versions reject Cookie: headers for security reasons.
+      if (cookieText && !cookieText.includes('# Netscape HTTP Cookie File') && /(?:^|;\s*)[^=;\s]+=[^;]*/.test(cookieText)) {
+        const domain = platform === 'youtube' ? '.youtube.com' : platform === 'bilibili' ? '.bilibili.com' : '.twitch.tv';
+        const normalizedPath = path.join(path.dirname(cookieFile), `.normalized-${platform}-cookies.txt`);
+        const entries = cookieText.split(';').map((entry) => entry.trim()).filter(Boolean).map((entry) => {
+          const separator = entry.indexOf('=');
+          if (separator <= 0) return null;
+          const name = entry.slice(0, separator).trim();
+          const value = entry.slice(separator + 1).trim();
+          return `${domain}\tTRUE\t/\tTRUE\t0\t${name}\t${value}`;
+        }).filter((entry): entry is string => !!entry);
+        fs.writeFileSync(normalizedPath, `# Netscape HTTP Cookie File\n${entries.join('\n')}\n`, { mode: 0o600 });
+        args.push('--cookies', normalizedPath);
+      } else {
+        args.push('--cookies', cookieFile);
+      }
+    } catch {
+      args.push('--cookies', cookieFile);
+    }
   }
   return args;
 }
