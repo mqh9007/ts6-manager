@@ -25,18 +25,19 @@ export const settingsApi = {
   reorderMusicSources: (ids: string[]) => api.put<MusicSourceSettings>('/settings/music-sources/order', { ids }).then((r) => r.data),
   updateMusicSourcePreference: (preferredPlatform: string) => api.put<MusicSourceSettings>('/settings/music-sources/preference', { preferredPlatform }).then((r) => r.data),
   deleteMusicSource: (id: string) => api.delete(`/settings/music-sources/${id}`).then((r) => r.data),
-  getYtCookieStatus: () => api.get('/settings/yt-cookies').then((r) => r.data),
+  getVideoCookieStatus: (platform: string) => api.get('/settings/video-cookies', { params: { platform } }).then((r) => r.data),
 
-  uploadYtCookieFile: (file: File) => {
+  uploadVideoCookieFile: (platform: string, file: File) => {
     const formData = new FormData();
     formData.append('cookies', file);
-    return api.post('/settings/yt-cookies', formData, {
+    formData.append('platform', platform);
+    return api.post('/settings/video-cookies', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }).then((r) => r.data);
   },
 
-  uploadYtCookieText: (text: string) =>
-    api.post('/settings/yt-cookies', { text }).then((r) => r.data),
+  uploadVideoCookieText: (platform: string, text: string) =>
+    api.post('/settings/video-cookies', { platform, text }).then((r) => r.data),
 
-  deleteYtCookies: () => api.delete('/settings/yt-cookies').then((r) => r.data),
+  deleteVideoCookies: (platform: string) => api.delete('/settings/video-cookies', { params: { platform } }).then((r) => r.data),
 };

@@ -11,7 +11,7 @@ import {
   useSetShuffle, useSetRepeat,
   usePlayFromQueue, useMoveQueueItem,
 } from '@/hooks/use-music-bots';
-import { useSongs, useUploadSong, useDeleteSong, useYouTubeSearch, useYouTubeDownload, useYouTubeInfo, useYouTubeDownloadBatch } from '@/hooks/use-music-library';
+import { useSongs, useUploadSong, useDeleteSong, useVideoSearch, useVideoDownload, useVideoInfo, useVideoDownloadBatch } from '@/hooks/use-music-library';
 import { useRadioStations, useRadioPresets, useCreateRadioStation, useDeleteRadioStation, usePlayRadio } from '@/hooks/use-radio-stations';
 import { usePlaylists, usePlaylist, useCreatePlaylist, useDeletePlaylist, useAddSongToPlaylist, useRemoveSongFromPlaylist } from '@/hooks/use-playlists';
 import { useServers } from '@/hooks/use-servers';
@@ -44,7 +44,7 @@ import { MusicSourcesTab } from '@/components/music/MusicSourcesTab';
 import { toast } from 'sonner';
 import { formatBytes } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
-import type { MusicBotSummary, PlaybackState, SongInfo, PlaylistSummary, PlaylistDetail, YouTubeSearchResult, RadioStationInfo, RadioPreset } from '@ts6/common';
+import type { MusicBotSummary, PlaybackState, SongInfo, PlaylistSummary, PlaylistDetail, VideoSearchResult, RadioStationInfo, RadioPreset } from '@ts6/common';
 
 // ─── Helper ──────────────────────────────────────────────────────────────────
 
@@ -746,20 +746,20 @@ function LibraryTab() {
   const { data: songs, isLoading } = useSongs(configId);
   const uploadSong = useUploadSong();
   const deleteSong = useDeleteSong();
-  const ytSearch = useYouTubeSearch();
-  const ytDownload = useYouTubeDownload();
+  const videoSearch = useVideoSearch();
+  const videoDownload = useVideoDownload();
 
-  const ytInfo = useYouTubeInfo();
-  const ytBatchDownload = useYouTubeDownloadBatch();
+  const videoInfo = useVideoInfo();
+  const videoBatchDownload = useVideoDownloadBatch();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [ytResults, setYtResults] = useState<YouTubeSearchResult[]>([]);
+  const [videoResults, setVideoResults] = useState<VideoSearchResult[]>([]);
   const [showYt, setShowYt] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [filter, setFilter] = useState('');
-  const [ytUrl, setYtUrl] = useState('');
-  const [urlInfo, setUrlInfo] = useState<{ type: 'video' | 'playlist'; items: YouTubeSearchResult[] } | null>(null);
+  const [videoUrl, setVideoUrl] = useState('');
+  const [urlInfo, setUrlInfo] = useState<{ type: 'video' | 'playlist'; items: VideoSearchResult[] } | null>(null);
   const [selectedUrlIds, setSelectedUrlIds] = useState<Set<string>>(new Set());
   const [batchProgress, setBatchProgress] = useState<string | null>(null);
 
@@ -783,20 +783,20 @@ function LibraryTab() {
     e.target.value = '';
   };
 
-  const handleYtSearch = () => {
+  const handleVideoSearch = () => {
     if (!searchQuery.trim() || !configId) return;
-    ytSearch.mutate({ configId, query: searchQuery }, {
+    videoSearch.mutate({ configId, query: searchQuery }, {
       onSuccess: (data: any) => {
-        setYtResults(Array.isArray(data) ? data : data?.results || []);
+        setVideoResults(Array.isArray(data) ? data : data?.results || []);
         setShowYt(true);
       },
-      onError: () => toast.error(t('music.bots.toast.youtubeSearchFailed')),
+      onError: () => toast.error(t('music.bots.toast.videoSearchFailed')),
     });
   };
 
-  const handleYtDownload = (url: string) => {
+  const handleVideoDownload = (url: string) => {
     if (!configId) return;
-    ytDownload.mutate({ configId, url }, {
+    videoDownload.mutate({ configId, url }, {
       onSuccess: () => toast.success(t('music.bots.toast.downloadStarted')),
       onError: () => toast.error(t('music.bots.toast.downloadFailed')),
     });
@@ -811,8 +811,8 @@ function LibraryTab() {
   };
 
   const handleLoadUrl = () => {
-    if (!ytUrl.trim() || !configId) return;
-    ytInfo.mutate({ configId, url: ytUrl }, {
+    if (!videoUrl.trim() || !configId) return;
+    videoInfo.mutate({ configId, url: videoUrl }, {
       onSuccess: (data: any) => {
         setUrlInfo(data);
         if (data.type === 'playlist') {
@@ -828,13 +828,13 @@ function LibraryTab() {
     const ids = Array.from(selectedUrlIds);
     const urls = ids.map((id) => `https://youtube.com/watch?v=${id}`);
     setBatchProgress(t('music.bots.downloadingProgress', { current: 0, total: urls.length }));
-    ytBatchDownload.mutate({ configId, urls }, {
+    videoBatchDownload.mutate({ configId, urls }, {
       onSuccess: (data: any) => {
         setBatchProgress(null);
         toast.success(t('music.bots.toast.downloadedCount', { downloaded: data.downloaded, total: data.total }));
         if (data.errors?.length) toast.error(t('music.bots.toast.downloadErrors', { count: data.errors.length }));
         setUrlInfo(null);
-        setYtUrl('');
+        setVideoUrl('');
       },
       onError: () => { setBatchProgress(null); toast.error(t('music.bots.toast.batchDownloadFailed')); },
     });
@@ -877,26 +877,26 @@ function LibraryTab() {
         </Button>
       </div>
 
-      {/* YouTube URL / Playlist Paste */}
+      {/* Video URL / Playlist Paste */}
       <Card className="border-dashed">
         <CardContent className="p-3 space-y-3">
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <Link className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                value={ytUrl}
-                onChange={(e) => setYtUrl(e.target.value)}
+                value={videoUrl}
+                onChange={(e) => setVideoUrl(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleLoadUrl()}
-                placeholder={t('music.bots.pasteYouTubeUrl')}
+                placeholder={t('music.bots.pasteVideoUrl')}
                 className="pl-9"
               />
             </div>
-            <Button variant="outline" size="sm" onClick={handleLoadUrl} disabled={ytInfo.isPending || !ytUrl.trim()}>
-              {ytInfo.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Youtube className="h-4 w-4 mr-1" />}
+            <Button variant="outline" size="sm" onClick={handleLoadUrl} disabled={videoInfo.isPending || !videoUrl.trim()}>
+              {videoInfo.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Youtube className="h-4 w-4 mr-1" />}
               {t('music.bots.load')}
             </Button>
             {urlInfo && (
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setUrlInfo(null); setYtUrl(''); }}>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setUrlInfo(null); setVideoUrl(''); }}>
                 <X className="h-4 w-4" />
               </Button>
             )}
@@ -923,9 +923,9 @@ function LibraryTab() {
                     </Button>
                     <Button variant="default" size="sm" className="h-7 text-xs"
                       onClick={handleBatchDownload}
-                      disabled={selectedUrlIds.size === 0 || ytBatchDownload.isPending}
+                      disabled={selectedUrlIds.size === 0 || videoBatchDownload.isPending}
                     >
-                      {ytBatchDownload.isPending ? (
+                      {videoBatchDownload.isPending ? (
                         <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> {batchProgress || t('music.bots.downloading')}</>
                       ) : (
                         <><Download className="h-3 w-3 mr-1" /> {t('music.bots.downloadSelected', { count: selectedUrlIds.size })}</>
@@ -962,8 +962,8 @@ function LibraryTab() {
                     </div>
                     {urlInfo.type === 'video' && (
                       <Button variant="default" size="sm" className="h-7 text-xs shrink-0"
-                        onClick={(e) => { e.stopPropagation(); handleYtDownload(`https://youtube.com/watch?v=${item.id}`); }}
-                        disabled={ytDownload.isPending}
+                        onClick={(e) => { e.stopPropagation(); handleVideoDownload(`https://youtube.com/watch?v=${item.id}`); }}
+                        disabled={videoDownload.isPending}
                       >
                         <Download className="h-3 w-3 mr-1" /> Download
                       </Button>
@@ -976,30 +976,30 @@ function LibraryTab() {
         </CardContent>
       </Card>
 
-      {/* YouTube Search */}
+      {/* Video Search */}
       <div className="flex items-center gap-2">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleYtSearch()}
-            placeholder={t('music.bots.searchYouTube')}
+            onKeyDown={(e) => e.key === 'Enter' && handleVideoSearch()}
+            placeholder={t('music.bots.searchVideos')}
             className="pl-9"
           />
         </div>
-        <Button variant="outline" size="sm" onClick={handleYtSearch} disabled={ytSearch.isPending || !searchQuery.trim()}>
-          {ytSearch.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Youtube className="h-4 w-4 mr-1" />}
+        <Button variant="outline" size="sm" onClick={handleVideoSearch} disabled={videoSearch.isPending || !searchQuery.trim()}>
+          {videoSearch.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Youtube className="h-4 w-4 mr-1" />}
           {t('music.bots.search')}
         </Button>
       </div>
 
-      {/* YouTube Results */}
-      {showYt && ytResults.length > 0 && (
+      {/* Video Results */}
+      {showYt && videoResults.length > 0 && (
         <Card>
           <CardHeader className="py-2 px-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-xs">{t('music.bots.youtubeResults', { count: ytResults.length })}</CardTitle>
+              <CardTitle className="text-xs">{t('music.bots.videoResults', { count: videoResults.length })}</CardTitle>
               <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowYt(false)}>
                 <X className="h-3.5 w-3.5" />
               </Button>
@@ -1007,7 +1007,7 @@ function LibraryTab() {
           </CardHeader>
           <CardContent className="p-0">
             <div className="max-h-60 overflow-y-auto">
-              {ytResults.map((r) => (
+              {videoResults.map((r) => (
                 <div key={r.id} className="flex items-center gap-3 px-3 py-2 hover:bg-muted/50 transition-colors">
                   {r.thumbnail && (
                     <img src={r.thumbnail} alt="" className="h-10 w-14 rounded object-cover shrink-0" />
@@ -1017,8 +1017,8 @@ function LibraryTab() {
                     <p className="text-[10px] text-muted-foreground">{r.artist} - {formatTime(r.duration)}</p>
                   </div>
                   <Button variant="outline" size="sm" className="h-7 text-xs shrink-0"
-                    onClick={() => handleYtDownload(`https://youtube.com/watch?v=${r.id}`)}
-                    disabled={ytDownload.isPending}
+                    onClick={() => handleVideoDownload(`https://youtube.com/watch?v=${r.id}`)}
+                    disabled={videoDownload.isPending}
                   >
                     <Download className="h-3 w-3 mr-1" /> {t('music.bots.download')}
                   </Button>

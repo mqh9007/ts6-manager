@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { requireRole } from '../middleware/rbac.js';
 import { AppError } from '../middleware/error-handler.js';
-import { downloadYouTube, searchYouTube, getYouTubeUrlInfo } from '../voice/audio/youtube.js';
+import { downloadVideo, searchVideos, getVideoUrlInfo } from '../voice/audio/video-source.js';
 import { config } from '../config.js';
 import multer from 'multer';
 import path from 'path';
@@ -116,25 +116,25 @@ musicLibraryRoutes.delete('/songs/:id', async (req: Request, res: Response, next
   } catch (err) { next(err); }
 });
 
-// POST /youtube/search — Search YouTube
-musicLibraryRoutes.post('/youtube/search', async (req: Request, res: Response, next) => {
+// POST /video/search — Search YouTube
+musicLibraryRoutes.post('/video/search', async (req: Request, res: Response, next) => {
   try {
     const { query } = req.body;
     if (!query) throw new AppError(400, 'query is required');
-    const results = await searchYouTube(query, 10);
+    const results = await searchVideos(query, 10);
     res.json(results);
   } catch (err) { next(err); }
 });
 
-// POST /youtube/download — Download from YouTube
-musicLibraryRoutes.post('/youtube/download', async (req: Request, res: Response, next) => {
+// POST /video/download — Download from YouTube
+musicLibraryRoutes.post('/video/download', async (req: Request, res: Response, next) => {
   try {
     const prisma = req.app.locals.prisma;
     const configId = parseInt(req.params.configId as string);
     const { url } = req.body;
     if (!url) throw new AppError(400, 'url is required');
 
-    const { filePath, info } = await downloadYouTube(url, MUSIC_DIR);
+    const { filePath, info } = await downloadVideo(url, MUSIC_DIR);
     const fileStats = fs.statSync(filePath);
 
     // Check if song already exists for this server (by sourceUrl)
@@ -162,18 +162,18 @@ musicLibraryRoutes.post('/youtube/download', async (req: Request, res: Response,
   } catch (err) { next(err); }
 });
 
-// POST /youtube/info — Get info about a YouTube URL (video or playlist)
-musicLibraryRoutes.post('/youtube/info', async (req: Request, res: Response, next) => {
+// POST /video/info — Get info about a YouTube URL (video or playlist)
+musicLibraryRoutes.post('/video/info', async (req: Request, res: Response, next) => {
   try {
     const { url } = req.body;
     if (!url) throw new AppError(400, 'url is required');
-    const info = await getYouTubeUrlInfo(url);
+    const info = await getVideoUrlInfo(url);
     res.json(info);
   } catch (err) { next(err); }
 });
 
-// POST /youtube/download-batch — Download multiple YouTube videos
-musicLibraryRoutes.post('/youtube/download-batch', async (req: Request, res: Response, next) => {
+// POST /video/download-batch — Download multiple YouTube videos
+musicLibraryRoutes.post('/video/download-batch', async (req: Request, res: Response, next) => {
   try {
     const prisma = req.app.locals.prisma;
     const configId = parseInt(req.params.configId as string);
@@ -194,7 +194,7 @@ musicLibraryRoutes.post('/youtube/download-batch', async (req: Request, res: Res
           continue;
         }
 
-        const { filePath, info } = await downloadYouTube(url, MUSIC_DIR);
+        const { filePath, info } = await downloadVideo(url, MUSIC_DIR);
         const fileStats = fs.statSync(filePath);
 
         const song = await prisma.song.create({

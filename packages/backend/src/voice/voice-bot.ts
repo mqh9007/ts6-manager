@@ -7,13 +7,13 @@ import { StreamSignaling, type ActiveStream, type SignalingMessage } from './str
 import { SidecarClient } from './streaming/sidecar-client.js';
 import { SidecarProcess, type SidecarConfig } from './streaming/sidecar-process.js';
 import { STREAM_PRESETS, DEFAULT_PRESET, type VideoViewerInfo, type VideoStreamStatus } from './streaming/types.js';
-import { getCookieArgs } from './audio/youtube.js';
+import { getVideoCookieArgs, getVideoPlatform } from './audio/video-source.js';
 import { spawn } from 'child_process';
 
 /** Resolve a YouTube/yt-dlp-compatible URL to a direct stream URL */
 function resolveVideoUrl(url: string, maxHeight: number = 720): Promise<string> {
   // Only resolve YouTube and other yt-dlp-supported sites
-  if (!url.includes('youtube.com/') && !url.includes('youtu.be/') && !url.includes('twitch.tv/')) {
+  if (!url.includes('youtube.com/') && !url.includes('youtu.be/') && !url.includes('twitch.tv/') && !url.includes('bilibili.com/') && !url.includes('b23.tv/')) {
     return Promise.resolve(url);
   }
 
@@ -21,7 +21,7 @@ function resolveVideoUrl(url: string, maxHeight: number = 720): Promise<string> 
     // Request best combined format (video+audio) up to the target height
     const formatFilter = `best[height<=${maxHeight}][ext=mp4]/best[height<=${maxHeight}]/best[ext=mp4]/best`;
     const proc = spawn('yt-dlp', [
-      ...getCookieArgs(),
+      ...getVideoCookieArgs(getVideoPlatform(url)),
       '-f', formatFilter,
       '--no-playlist',
       '-g',  // print direct URL only

@@ -102,7 +102,7 @@ export interface PlaylistDetail extends PlaylistSummary {
 
 // === YouTube Types ===
 
-export interface YouTubeSearchResult {
+export interface VideoSearchResult {
   id: string;
   title: string;
   artist: string;
@@ -127,9 +127,9 @@ export interface RadioPreset {
   genre: string;
 }
 
-export interface YouTubeUrlInfo {
+export interface VideoUrlInfo {
   type: 'video' | 'playlist';
-  items: YouTubeSearchResult[];
+  items: VideoSearchResult[];
 }
 
 // === Video Streaming Types ===

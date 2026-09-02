@@ -27,34 +27,34 @@ export function useDeleteSong() {
   });
 }
 
-export function useYouTubeSearch() {
+export function useVideoSearch() {
   return useMutation({
     mutationFn: ({ configId, query }: { configId: number; query: string }) =>
-      musicLibraryApi.youtubeSearch(configId, query),
+      musicLibraryApi.videoSearch(configId, query),
   });
 }
 
-export function useYouTubeDownload() {
+export function useVideoDownload() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ configId, url }: { configId: number; url: string }) =>
-      musicLibraryApi.youtubeDownload(configId, url),
+      musicLibraryApi.videoDownload(configId, url),
     onSuccess: (_, { configId }) => qc.invalidateQueries({ queryKey: ['songs', configId] }),
   });
 }
 
-export function useYouTubeInfo() {
+export function useVideoInfo() {
   return useMutation({
     mutationFn: ({ configId, url }: { configId: number; url: string }) =>
-      musicLibraryApi.youtubeInfo(configId, url),
+      musicLibraryApi.videoInfo(configId, url),
   });
 }
 
-export function useYouTubeDownloadBatch() {
+export function useVideoDownloadBatch() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ configId, urls }: { configId: number; urls: string[] }) =>
-      musicLibraryApi.youtubeDownloadBatch(configId, urls),
+      musicLibraryApi.videoDownloadBatch(configId, urls),
     onSuccess: (_, { configId }) => qc.invalidateQueries({ queryKey: ['songs', configId] }),
   });
 }

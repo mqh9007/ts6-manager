@@ -3,7 +3,7 @@ import { requireRole } from '../middleware/rbac.js';
 import { AppError } from '../middleware/error-handler.js';
 import { config } from '../config.js';
 import type { VoiceBotManager } from '../voice/voice-bot-manager.js';
-import { downloadYouTube, downloadBilibili } from '../voice/audio/youtube.js';
+import { downloadVideo, downloadBilibili } from '../voice/audio/video-source.js';
 import { playerWidgetToken } from './widget-public.routes.js';
 
 export const musicBotRoutes: Router = Router();

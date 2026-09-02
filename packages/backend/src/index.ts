@@ -7,7 +7,7 @@ import { BotEngine } from './bot-engine/engine.js';
 import { VoiceBotManager } from './voice/voice-bot-manager.js';
 import { MusicCommandHandler } from './voice/music-command-handler.js';
 import { config } from './config.js';
-import { setYtCookieFile } from './voice/audio/youtube.js';
+import { setVideoCookieFile, type VideoPlatform } from './voice/audio/video-source.js';
 import jwt from 'jsonwebtoken';
 import fs from 'fs';
 import path from 'path';
@@ -24,15 +24,23 @@ async function main() {
 
   // Configure yt-dlp cookie file: env var takes priority, then saved file from data dir
   const cookiePath = process.env.YT_COOKIE_FILE;
-  const savedCookiePath = path.resolve('data', 'yt-cookies.txt');
+  const cookiePaths: Record<VideoPlatform, string> = {
+    youtube: path.resolve('data', 'youtube-cookies.txt'),
+    bilibili: path.resolve('data', 'bilibili-cookies.txt'),
+    twitch: path.resolve('data', 'twitch-cookies.txt'),
+  };
   if (cookiePath && fs.existsSync(cookiePath)) {
-    setYtCookieFile(cookiePath);
-    console.log(`[yt-dlp] Using cookie file (env): ${cookiePath}`);
-  } else if (fs.existsSync(savedCookiePath)) {
-    setYtCookieFile(savedCookiePath);
-    console.log(`[yt-dlp] Using saved cookie file: ${savedCookiePath}`);
+    cookiePaths.youtube = cookiePath;
+  } else if (fs.existsSync(path.resolve('data', 'yt-cookies.txt')) && !fs.existsSync(cookiePaths.youtube)) {
+    cookiePaths.youtube = path.resolve('data', 'yt-cookies.txt');
   } else if (cookiePath) {
-    console.warn(`[yt-dlp] Cookie file not found: ${cookiePath}`);
+    console.warn(`[video-source] Cookie file not found: ${cookiePath}`);
+  }
+  for (const platform of ['youtube', 'bilibili', 'twitch'] as VideoPlatform[]) {
+    if (fs.existsSync(cookiePaths[platform])) {
+      setVideoCookieFile(platform, cookiePaths[platform]);
+      console.log(`[video-source] Using ${platform} cookie file: ${cookiePaths[platform]}`);
+    }
   }
 
   const prisma = new PrismaClient();

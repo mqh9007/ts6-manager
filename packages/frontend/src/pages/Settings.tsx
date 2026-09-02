@@ -17,7 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
-import { Users, Server, Plus, Trash2, Pencil, TestTube, Check, X, Lock, KeyRound, Youtube, Upload, FileText, Info } from 'lucide-react';
+import { Users, Server, Plus, Trash2, Pencil, TestTube, Check, X, Lock, KeyRound, Youtube, Video, Upload, FileText, Info } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Settings() {
@@ -34,7 +34,7 @@ export default function Settings() {
           {isAdmin && <TabsTrigger value="connections"><Server className="h-3.5 w-3.5 mr-1" /> {t('settings.tabs.connections')}</TabsTrigger>}
           <TabsTrigger value="account"><Lock className="h-3.5 w-3.5 mr-1" /> {t('settings.tabs.account')}</TabsTrigger>
           {isAdmin && <TabsTrigger value="users"><Users className="h-3.5 w-3.5 mr-1" /> {t('settings.tabs.users')}</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="youtube"><Youtube className="h-3.5 w-3.5 mr-1" /> {t('settings.tabs.youtube')}</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="video-cookies"><Video className="h-3.5 w-3.5 mr-1" /> {t('settings.tabs.videoCookies')}</TabsTrigger>}
           <TabsTrigger value="about"><Info className="h-3.5 w-3.5 mr-1" /> {t('settings.tabs.about')}</TabsTrigger>
         </TabsList>
 
@@ -59,8 +59,8 @@ export default function Settings() {
         )}
 
         {isAdmin && (
-          <TabsContent value="youtube" className="mt-4">
-            <YouTubeTab />
+          <TabsContent value="video-cookies" className="mt-4">
+            <VideoCookieTab />
           </TabsContent>
         )}
 
@@ -464,44 +464,46 @@ function UsersTab() {
   );
 }
 
-function YouTubeTab() {
+function VideoCookieTab() {
   const { t } = useTranslation();
   const qc = useQueryClient();
+  const [cookiePlatform, setCookiePlatform] = useState<'youtube' | 'bilibili' | 'twitch'>('youtube');
+  const platformName = cookiePlatform === 'youtube' ? 'YouTube' : cookiePlatform === 'bilibili' ? 'Bilibili' : 'Twitch';
   const [pasteMode, setPasteMode] = useState(false);
   const [cookieText, setCookieText] = useState('');
 
   const { data: status, isLoading } = useQuery({
-    queryKey: ['yt-cookie-status'],
-    queryFn: settingsApi.getYtCookieStatus,
+    queryKey: ['video-cookie-status', cookiePlatform],
+    queryFn: () => settingsApi.getVideoCookieStatus(cookiePlatform),
   });
 
   const uploadFile = useMutation({
-    mutationFn: (file: File) => settingsApi.uploadYtCookieFile(file),
+    mutationFn: (file: File) => settingsApi.uploadVideoCookieFile(cookiePlatform, file),
     onSuccess: () => {
-      toast.success(t('settings.youtube.toast.uploaded'));
-      qc.invalidateQueries({ queryKey: ['yt-cookie-status'] });
+      toast.success(t('settings.videoCookies.toast.uploaded'));
+      qc.invalidateQueries({ queryKey: ['video-cookie-status', cookiePlatform] });
     },
-    onError: () => toast.error(t('settings.youtube.toast.uploadFailed')),
+    onError: () => toast.error(t('settings.videoCookies.toast.uploadFailed')),
   });
 
   const uploadText = useMutation({
-    mutationFn: (text: string) => settingsApi.uploadYtCookieText(text),
+    mutationFn: (text: string) => settingsApi.uploadVideoCookieText(cookiePlatform, text),
     onSuccess: () => {
-      toast.success(t('settings.youtube.toast.saved'));
+      toast.success(t('settings.videoCookies.toast.saved'));
       setCookieText('');
       setPasteMode(false);
-      qc.invalidateQueries({ queryKey: ['yt-cookie-status'] });
+      qc.invalidateQueries({ queryKey: ['video-cookie-status', cookiePlatform] });
     },
-    onError: () => toast.error(t('settings.youtube.toast.saveFailed')),
+    onError: () => toast.error(t('settings.videoCookies.toast.saveFailed')),
   });
 
   const deleteCookies = useMutation({
-    mutationFn: () => settingsApi.deleteYtCookies(),
+    mutationFn: () => settingsApi.deleteVideoCookies(cookiePlatform),
     onSuccess: () => {
-      toast.success(t('settings.youtube.toast.removed'));
-      qc.invalidateQueries({ queryKey: ['yt-cookie-status'] });
+      toast.success(t('settings.videoCookies.toast.removed'));
+      qc.invalidateQueries({ queryKey: ['video-cookie-status', cookiePlatform] });
     },
-    onError: () => toast.error(t('settings.youtube.toast.removeFailed')),
+    onError: () => toast.error(t('settings.videoCookies.toast.removeFailed')),
   });
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -517,23 +519,34 @@ function YouTubeTab() {
 
   return (
     <div className="max-w-lg space-y-4">
+      <div className="space-y-2">
+        <Label className="text-xs">{t('settings.videoCookies.platformLabel')}</Label>
+        <Select value={cookiePlatform} onValueChange={(value: 'youtube' | 'bilibili' | 'twitch') => { setCookiePlatform(value); setPasteMode(false); setCookieText(''); }}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="youtube">YouTube</SelectItem>
+            <SelectItem value="bilibili">Bilibili</SelectItem>
+            <SelectItem value="twitch">Twitch</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm font-medium">{t('settings.youtube.title')}</CardTitle>
+          <CardTitle className="text-sm font-medium">{t('settings.videoCookies.title', { platform: platformName })}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-xs text-muted-foreground">
-            {t('settings.youtube.description')}{' '}
-            <span className="font-medium">{t('settings.youtube.extensionName')}</span> (Chrome/Firefox).
+            {t('settings.videoCookies.description', { platform: platformName })}{' '}
+            <span className="font-medium">{t('settings.videoCookies.extensionName')}</span> (Chrome/Firefox).
           </p>
 
           {/* Status */}
           <div className="flex items-center gap-2">
             <span className={`w-2 h-2 rounded-full ${status?.active ? 'bg-green-500' : 'bg-zinc-500'}`} />
             <span className="text-sm">
-              {isLoading ? t('settings.youtube.loading') : status?.active
-                ? t('settings.youtube.active', { size: formatSize(status.size) })
-                : t('settings.youtube.noCookies')}
+              {isLoading ? t('settings.videoCookies.loading') : status?.active
+                ? t('settings.videoCookies.active', { size: formatSize(status.size) })
+                : t('settings.videoCookies.noCookies')}
             </span>
           </div>
 
@@ -553,7 +566,7 @@ function YouTubeTab() {
               disabled={uploadFile.isPending}
             >
               <Upload className="h-3.5 w-3.5 mr-1" />
-              {uploadFile.isPending ? t('settings.youtube.uploading') : t('settings.youtube.upload')}
+              {uploadFile.isPending ? t('settings.videoCookies.uploading') : t('settings.videoCookies.upload')}
             </Button>
             <Button
               variant="outline"
@@ -561,7 +574,7 @@ function YouTubeTab() {
               onClick={() => setPasteMode(!pasteMode)}
             >
               <FileText className="h-3.5 w-3.5 mr-1" />
-              {t('settings.youtube.paste')}
+              {t('settings.videoCookies.paste')}
             </Button>
             {status?.active && (
               <Button
@@ -572,7 +585,7 @@ function YouTubeTab() {
                 disabled={deleteCookies.isPending}
               >
                 <Trash2 className="h-3.5 w-3.5 mr-1" />
-                {t('settings.youtube.remove')}
+                {t('settings.videoCookies.remove')}
               </Button>
             )}
           </div>
@@ -582,7 +595,7 @@ function YouTubeTab() {
             <div className="space-y-2">
               <textarea
                 className="w-full h-32 rounded-md border border-border bg-background px-3 py-2 text-xs font-mono resize-none focus:outline-none focus:ring-1 focus:ring-ring"
-                placeholder={t('settings.youtube.pastePlaceholder')}
+                placeholder={t('settings.videoCookies.pastePlaceholder', { domain: cookiePlatform === 'bilibili' ? 'bilibili.com' : `${cookiePlatform}.com` })}
                 value={cookieText}
                 onChange={(e) => setCookieText(e.target.value)}
               />
@@ -592,7 +605,7 @@ function YouTubeTab() {
                   onClick={() => uploadText.mutate(cookieText)}
                   disabled={!cookieText.trim() || uploadText.isPending}
                 >
-                  {uploadText.isPending ? t('settings.youtube.saving') : t('settings.youtube.save')}
+                  {uploadText.isPending ? t('settings.videoCookies.saving') : t('settings.videoCookies.save')}
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => { setPasteMode(false); setCookieText(''); }}>
                   {t('common.cancel')}

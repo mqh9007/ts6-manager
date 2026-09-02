@@ -623,7 +623,7 @@
       "noSongsDescription": "上传音频文件或从 YouTube 下载以建立您的音乐库。",
       "noSongsFound": "未找到歌曲。请先在音乐库标签页中上传歌曲。",
       "noSongsInPlaylist": "此播放列表中无歌曲",
-      "pasteYouTubeUrl": "粘贴 YouTube URL 或播放列表...",
+      "pasteVideoUrl": "粘贴 YouTube URL 或播放列表...",
       "play": "播放",
       "playEllipsis": "播放...",
       "playMusic": "播放音乐",
@@ -646,7 +646,7 @@
       "removeStationFromList": "这将从您的列表中移除此频道。",
       "save": "保存",
       "search": "搜索",
-      "searchYouTube": "搜索 YouTube...",
+      "searchVideos": "搜索 YouTube...",
       "selectAll": "全选",
       "selectBot": "选择机器人：",
       "selectBotPlaceholder": "选择机器人...",
@@ -678,7 +678,7 @@
       "video": "视频",
       "voicePortLabel": "语音端口",
       "volumeLabel": "音量（{{volume}}%）",
-      "youtubeResults": "YouTube 结果（{{count}}）",
+      "videoResults": "YouTube 结果（{{count}}）",
       "toast": {
         "addPresetFailed": "添加失败：{{name}}",
         "addStationFailed": "添加频道失败",
@@ -1086,7 +1086,7 @@
       "connections": "连接",
       "musicSources": "音乐源",
       "users": "用户",
-      "youtube": "YouTube"
+      "videoCookies": "视频 Cookie"
       ,"about": "关于"
     },
     "about": { "title": "关于", "version": "版本号" },
@@ -1186,18 +1186,19 @@
       "username": "用户名",
       "usernamePlaceholder": "zhangsan"
     },
-    "youtube": {
+    "videoCookies": {
+      "platformLabel": "视频平台",
       "active": "Cookie 活跃（{{size}}）",
-      "description": "上传 cookies.txt 文件以访问年龄限制或仅限会员的 YouTube 内容。您可以使用浏览器扩展导出 Cookie，例如",
+      "description": "上传 cookies.txt 文件以访问受限或仅限会员的 {{platform}} 内容。您可以使用浏览器扩展导出 Cookie，例如",
       "extensionName": "Get cookies.txt LOCALLY",
       "loading": "加载中...",
       "noCookies": "未配置 Cookie",
       "paste": "粘贴 Cookie",
-      "pastePlaceholder": "# Netscape HTTP Cookie File\n.youtube.com\tTRUE\t/\tTRUE\t0\tCOOKIE_NAME\tCOOKIE_VALUE",
+      "pastePlaceholder": "# Netscape HTTP Cookie File\n.{{domain}}\tTRUE\t/\tTRUE\t0\tCOOKIE_NAME\tCOOKIE_VALUE",
       "remove": "移除",
       "save": "保存",
       "saving": "保存中...",
-      "title": "YouTube Cookie",
+      "title": "{{platform}} Cookie",
       "toast": {
         "removeFailed": "移除 Cookie 失败",
         "removed": "Cookie 文件已移除",

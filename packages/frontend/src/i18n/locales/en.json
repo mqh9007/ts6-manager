@@ -618,7 +618,7 @@
       "noSongsDescription": "Upload audio files or download from YouTube to build your library.",
       "noSongsFound": "No songs found. Upload songs in the Library tab first.",
       "noSongsInPlaylist": "No songs in this playlist",
-      "pasteYouTubeUrl": "Paste YouTube URL or playlist...",
+      "pasteVideoUrl": "Paste YouTube URL or playlist...",
       "play": "Play",
       "playEllipsis": "Play...",
       "playMusic": "Play Music",
@@ -641,7 +641,7 @@
       "removeStationFromList": "This will remove this station from your list.",
       "save": "Save",
       "search": "Search",
-      "searchYouTube": "Search YouTube...",
+      "searchVideos": "Search YouTube...",
       "selectAll": "Select All",
       "selectBot": "Select Bot:",
       "selectBotPlaceholder": "Select bot...",
@@ -675,7 +675,7 @@
       "video": "Video",
       "voicePortLabel": "Voice Port",
       "volumeLabel": "Volume ({{volume}}%)",
-      "youtubeResults": "YouTube Results ({{count}})",
+      "videoResults": "Video Results ({{count}})",
       "toast": {
         "addPresetFailed": "Failed to add: {{name}}",
         "addStationFailed": "Failed to add station",
@@ -1083,7 +1083,7 @@
       "connections": "Connections",
       "musicSources": "Music Sources",
       "users": "Users",
-      "youtube": "YouTube"
+      "videoCookies": "Video Cookies"
       ,"about": "About"
     },
     "about": { "title": "About", "version": "Version" },
@@ -1183,18 +1183,19 @@
       "username": "Username",
       "usernamePlaceholder": "johndoe"
     },
-    "youtube": {
+    "videoCookies": {
+      "platformLabel": "Video platform",
       "active": "Cookies active ({{size}})",
-      "description": "Upload a cookies.txt file to access age-restricted or member-only YouTube content. You can export cookies from your browser using extensions like",
+      "description": "Upload a cookies.txt file for restricted or member-only {{platform}} content. You can export cookies from your browser using extensions like",
       "extensionName": "Get cookies.txt LOCALLY",
       "loading": "Loading...",
       "noCookies": "No cookies configured",
       "paste": "Paste cookies",
-      "pastePlaceholder": "# Netscape HTTP Cookie File\n.youtube.com\tTRUE\t/\tTRUE\t0\tCOOKIE_NAME\tCOOKIE_VALUE",
+      "pastePlaceholder": "# Netscape HTTP Cookie File\n.{{domain}}\tTRUE\t/\tTRUE\t0\tCOOKIE_NAME\tCOOKIE_VALUE",
       "remove": "Remove",
       "save": "Save",
       "saving": "Saving...",
-      "title": "YouTube Cookies",
+      "title": "{{platform}} Cookies",
       "toast": {
         "removeFailed": "Failed to remove cookies",
         "removed": "Cookie file removed",

@@ -2,7 +2,7 @@ import { spawn } from "child_process";
 import path from "path";
 import fs from "fs";
 
-export interface YouTubeInfo {
+export interface VideoInfo {
   id: string;
   title: string;
   artist: string;
@@ -11,7 +11,7 @@ export interface YouTubeInfo {
   url: string;
 }
 
-export interface YouTubeSearchResult {
+export interface VideoSearchResult {
   id: string;
   title: string;
   artist: string;
@@ -19,35 +19,42 @@ export interface YouTubeSearchResult {
   thumbnail: string;
 }
 
-// Shared cookie file path (set from settings)
-let ytCookieFile: string | null = null;
+export type VideoPlatform = 'youtube' | 'bilibili' | 'twitch';
+const videoCookieFiles = new Map<VideoPlatform, string>();
 
-export function setYtCookieFile(filePath: string | null): void {
-  ytCookieFile = filePath;
+export function setVideoCookieFile(platform: VideoPlatform, filePath: string | null): void {
+  if (filePath) videoCookieFiles.set(platform, filePath);
+  else videoCookieFiles.delete(platform);
 }
 
-export function getYtCookieFile(): string | null {
-  return ytCookieFile;
+export function getVideoCookieFile(platform: VideoPlatform): string | null {
+  return videoCookieFiles.get(platform) || null;
 }
 
-export function getCookieArgs(): string[] {
+export function getVideoCookieArgs(platform: VideoPlatform = 'youtube'): string[] {
   const args: string[] = ["--remote-components", "ejs:github"];
-  if (ytCookieFile) {
-    args.push("--cookies", ytCookieFile);
+  const cookieFile = videoCookieFiles.get(platform);
+  if (cookieFile) {
+    args.push("--cookies", cookieFile);
   }
   return args;
+}
+
+export function getVideoPlatform(url: string): VideoPlatform {
+  return /bilibili\.com|b23\.tv/i.test(url) ? 'bilibili' : /twitch\.tv/i.test(url) ? 'twitch' : 'youtube';
 }
 
 /**
  * Download audio from a YouTube URL using yt-dlp
  */
-export function downloadYouTube(url: string, outputDir: string): Promise<{ filePath: string; info: YouTubeInfo }> {
+export function downloadVideo(url: string, outputDir: string): Promise<{ filePath: string; info: VideoInfo }> {
+  const platform = getVideoPlatform(url);
   return new Promise((resolve, reject) => {
     const outputTemplate = path.join(outputDir, "%(id)s.%(ext)s");
 
     // First get info
     const infoProc = spawn("yt-dlp", [
-        ...getCookieArgs(),
+        ...getVideoCookieArgs(platform),
         "--dump-json",
       "--no-playlist",
       url,
@@ -74,7 +81,7 @@ export function downloadYouTube(url: string, outputDir: string): Promise<{ fileP
         return reject(new Error("Failed to parse yt-dlp output"));
       }
 
-      const info: YouTubeInfo = {
+      const info: VideoInfo = {
         id: parsed.id,
         title: parsed.title || "Unknown",
         artist: parsed.uploader || parsed.channel || "Unknown",
@@ -92,7 +99,7 @@ export function downloadYouTube(url: string, outputDir: string): Promise<{ fileP
 
       // Download audio only
       const dlProc = spawn("yt-dlp", [
-        ...getCookieArgs(),
+        ...getVideoCookieArgs(platform),
         "-x",                       // extract audio
         "--audio-format", "opus",   // opus format (native for TS3)
         "--audio-quality", "0",     // best quality
@@ -133,7 +140,7 @@ export function downloadYouTube(url: string, outputDir: string): Promise<{ fileP
 }
 
 /** Download audio from a Bilibili video URL using yt-dlp. */
-export function downloadBilibili(url: string, outputDir: string): Promise<{ filePath: string; info: YouTubeInfo }> {
+export function downloadBilibili(url: string, outputDir: string): Promise<{ filePath: string; info: VideoInfo }> {
   const input = url.trim();
   const bvMatch = input.match(/^BV[0-9A-Za-z]{8,}$/i);
   const normalizedUrl = bvMatch
@@ -142,17 +149,17 @@ export function downloadBilibili(url: string, outputDir: string): Promise<{ file
   if (!/^https?:\/\/(?:www\.)?(?:bilibili\.com\/video\/BV[0-9A-Za-z]+|b23\.tv\/)[^\s]*$/i.test(normalizedUrl)) {
     return Promise.reject(new Error('Only a Bilibili BV ID or link is supported (BVxxxxxx / https://www.bilibili.com/video/BV...)'));
   }
-  return downloadYouTube(normalizedUrl, outputDir);
+  return downloadVideo(normalizedUrl, outputDir);
 }
 
 /**
  * Get info about a YouTube URL (single video or playlist).
  * Returns type ('video' or 'playlist') and array of items.
  */
-export function getYouTubeUrlInfo(url: string): Promise<{ type: 'video' | 'playlist'; items: YouTubeSearchResult[] }> {
+export function getVideoUrlInfo(url: string): Promise<{ type: 'video' | 'playlist'; items: VideoSearchResult[] }> {
   return new Promise((resolve, reject) => {
     const proc = spawn("yt-dlp", [
-        ...getCookieArgs(),
+        ...getVideoCookieArgs(),
         "--dump-json",
       "--flat-playlist",
       "--no-download",
@@ -175,7 +182,7 @@ export function getYouTubeUrlInfo(url: string): Promise<{ type: 'video' | 'playl
 
       try {
         const lines = output.trim().split("\n").filter(Boolean);
-        const items: YouTubeSearchResult[] = lines.map((line) => {
+        const items: VideoSearchResult[] = lines.map((line) => {
           const parsed = JSON.parse(line);
           return {
             id: parsed.id,
@@ -202,10 +209,10 @@ export function getYouTubeUrlInfo(url: string): Promise<{ type: 'video' | 'playl
 /**
  * Search YouTube using yt-dlp
  */
-export function searchYouTube(query: string, maxResults: number = 10): Promise<YouTubeSearchResult[]> {
+export function searchVideos(query: string, maxResults: number = 10): Promise<VideoSearchResult[]> {
   return new Promise((resolve, reject) => {
     const proc = spawn("yt-dlp", [
-        ...getCookieArgs(),
+        ...getVideoCookieArgs(),
         `ytsearch${maxResults}:${query}`,
       "--dump-json",
       "--flat-playlist",

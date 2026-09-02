@@ -64,14 +64,14 @@ export const musicLibraryApi = {
     }).then((r) => r.data),
   deleteSong: (configId: number, songId: number) =>
     api.delete(`/servers/${configId}/music-library/songs/${songId}`).then((r) => r.data),
-  youtubeSearch: (configId: number, query: string) =>
-    api.post(`/servers/${configId}/music-library/youtube/search`, { query }).then((r) => r.data),
-  youtubeDownload: (configId: number, url: string) =>
-    api.post(`/servers/${configId}/music-library/youtube/download`, { url }).then((r) => r.data),
-  youtubeInfo: (configId: number, url: string) =>
-    api.post(`/servers/${configId}/music-library/youtube/info`, { url }).then((r) => r.data),
-  youtubeDownloadBatch: (configId: number, urls: string[]) =>
-    api.post(`/servers/${configId}/music-library/youtube/download-batch`, { urls }, { timeout: 600000 }).then((r) => r.data),
+  videoSearch: (configId: number, query: string) =>
+    api.post(`/servers/${configId}/music-library/video/search`, { query }).then((r) => r.data),
+  videoDownload: (configId: number, url: string) =>
+    api.post(`/servers/${configId}/music-library/video/download`, { url }).then((r) => r.data),
+  videoInfo: (configId: number, url: string) =>
+    api.post(`/servers/${configId}/music-library/video/info`, { url }).then((r) => r.data),
+  videoDownloadBatch: (configId: number, urls: string[]) =>
+    api.post(`/servers/${configId}/music-library/video/download-batch`, { urls }, { timeout: 600000 }).then((r) => r.data),
 };
 
 // === Radio Station API ===

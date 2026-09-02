@@ -9,7 +9,7 @@ import fs from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import { AppError } from '../middleware/error-handler.js';
-import { setYtCookieFile, getYtCookieFile } from '../voice/audio/youtube.js';
+import { setVideoCookieFile, getVideoCookieFile, type VideoPlatform } from '../voice/audio/video-source.js';
 import { parseLxMusicSource, type LxSourcePlatform } from '../voice/music-sources/lx-source-parser.js';
 import { testLxMusicSource } from '../voice/music-sources/lx-source-runtime.js';
 
@@ -17,7 +17,13 @@ const settingsRoutes: Router = Router();
 
 // Cookie file stored in the backend data directory (persisted in Docker volume)
 const COOKIE_DIR = path.resolve('data');
-const COOKIE_PATH = path.join(COOKIE_DIR, 'yt-cookies.txt');
+const VIDEO_PLATFORMS: VideoPlatform[] = ['youtube', 'bilibili', 'twitch'];
+const COOKIE_PATHS: Record<VideoPlatform, string> = {
+  youtube: path.join(COOKIE_DIR, 'youtube-cookies.txt'),
+  bilibili: path.join(COOKIE_DIR, 'bilibili-cookies.txt'),
+  twitch: path.join(COOKIE_DIR, 'twitch-cookies.txt'),
+};
+const LEGACY_COOKIE_PATH = path.join(COOKIE_DIR, 'video-cookies.txt');
 const MUSIC_SOURCES_KEY = 'music.sources';
 const MUSIC_SOURCE_DIR = path.join(COOKIE_DIR, 'music-sources');
 
@@ -154,21 +160,30 @@ settingsRoutes.delete('/music-sources/:id', requireAdmin, async (req: Request, r
   } catch (err) { next(err); }
 });
 
-// GET /api/settings/yt-cookies — Check cookie file status
-settingsRoutes.get('/yt-cookies', requireAdmin, (_req: Request, res: Response) => {
-  const exists = fs.existsSync(COOKIE_PATH);
-  const activePath = getYtCookieFile();
+// GET /api/settings/video-cookies — Check cookie file status
+settingsRoutes.get('/video-cookies', requireAdmin, (req: Request, res: Response) => {
+  const platform = String(req.query.platform || 'youtube') as VideoPlatform;
+  if (!VIDEO_PLATFORMS.includes(platform)) throw new AppError(400, 'Unknown video platform');
+  const cookiePath = COOKIE_PATHS[platform];
+  const legacyPath = platform === 'youtube' ? LEGACY_COOKIE_PATH : null;
+  const storedPath = fs.existsSync(cookiePath) ? cookiePath : legacyPath && fs.existsSync(legacyPath) ? legacyPath : cookiePath;
+  const exists = fs.existsSync(storedPath);
+  const activePath = getVideoCookieFile(platform);
   res.json({
-    active: !!activePath,
+    platform,
+    active: exists && !!activePath,
     exists,
-    size: exists ? fs.statSync(COOKIE_PATH).size : 0,
+    size: exists ? fs.statSync(storedPath).size : 0,
     path: activePath,
   });
 });
 
-// POST /api/settings/yt-cookies — Upload cookie file
-settingsRoutes.post('/yt-cookies', requireAdmin, upload.single('cookies'), (req: Request, res: Response, next) => {
+// POST /api/settings/video-cookies — Upload cookie file
+settingsRoutes.post('/video-cookies', requireAdmin, upload.single('cookies'), (req: Request, res: Response, next) => {
   try {
+    const platform = String(req.body?.platform || req.query.platform || 'youtube') as VideoPlatform;
+    if (!VIDEO_PLATFORMS.includes(platform)) throw new AppError(400, 'Unknown video platform');
+    const cookiePath = COOKIE_PATHS[platform];
     if (!req.file) {
       // Check if raw text was sent in body
       const text = req.body?.text;
@@ -176,26 +191,29 @@ settingsRoutes.post('/yt-cookies', requireAdmin, upload.single('cookies'), (req:
         throw new AppError(400, 'No cookie file or text provided');
       }
       fs.mkdirSync(COOKIE_DIR, { recursive: true });
-      fs.writeFileSync(COOKIE_PATH, text, 'utf-8');
+      fs.writeFileSync(cookiePath, text, 'utf-8');
     } else {
       fs.mkdirSync(COOKIE_DIR, { recursive: true });
-      fs.writeFileSync(COOKIE_PATH, req.file.buffer);
+      fs.writeFileSync(cookiePath, req.file.buffer);
     }
 
-    setYtCookieFile(COOKIE_PATH);
-    const size = fs.statSync(COOKIE_PATH).size;
+    setVideoCookieFile(platform, cookiePath);
+    const size = fs.statSync(cookiePath).size;
     console.log(`[yt-dlp] Cookie file uploaded (${size} bytes)`);
     res.json({ success: true, size });
   } catch (err) { next(err); }
 });
 
-// DELETE /api/settings/yt-cookies — Remove cookie file
-settingsRoutes.delete('/yt-cookies', requireAdmin, (_req: Request, res: Response, next) => {
+// DELETE /api/settings/video-cookies — Remove cookie file
+settingsRoutes.delete('/video-cookies', requireAdmin, (req: Request, res: Response, next) => {
   try {
-    if (fs.existsSync(COOKIE_PATH)) {
-      fs.unlinkSync(COOKIE_PATH);
+    const platform = String(req.query.platform || 'youtube') as VideoPlatform;
+    if (!VIDEO_PLATFORMS.includes(platform)) throw new AppError(400, 'Unknown video platform');
+    const cookiePath = COOKIE_PATHS[platform];
+    if (fs.existsSync(cookiePath)) {
+      fs.unlinkSync(cookiePath);
     }
-    setYtCookieFile(null);
+    setVideoCookieFile(platform, null);
     console.log('[yt-dlp] Cookie file removed');
     res.json({ success: true });
   } catch (err) { next(err); }

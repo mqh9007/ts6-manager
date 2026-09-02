@@ -2,7 +2,7 @@ import type { PrismaClient } from '../../generated/prisma/index.js';
 import { VoiceBotManager } from './voice-bot-manager.js';
 import type { VoiceBot } from './voice-bot.js';
 import type { QueueItem } from './playlist/queue.js';
-import { downloadYouTube, downloadBilibili } from './audio/youtube.js';
+import { downloadVideo, downloadBilibili } from './audio/video-source.js';
 import { MusicSourceService } from './music-sources/music-source-service.js';
 import { config } from '../config.js';
 
@@ -209,7 +209,7 @@ export class MusicCommandHandler {
         const song = results[0];
         if (!song) throw new Error('No matching song found');
         const streamUrl = await sourceService.resolve(song);
-        const { filePath } = await downloadYouTube(streamUrl, MUSIC_DIR);
+        const { filePath } = await downloadVideo(streamUrl, MUSIC_DIR);
         const queueItem: QueueItem = {
           id: `source_${botId}_${Date.now()}`,
           title: song.title,
@@ -255,7 +255,7 @@ export class MusicCommandHandler {
       const downloadSong = async (index: number): Promise<QueueItem> => {
         const song = playlist.tracks[index];
         const streamUrl = await service.resolve(song);
-        const { filePath } = await downloadYouTube(streamUrl, MUSIC_DIR);
+        const { filePath } = await downloadVideo(streamUrl, MUSIC_DIR);
         return { id: `playlist_${Date.now()}_${index}`, title: song.title, artist: song.artist, duration: song.duration || undefined, filePath, source: 'music-source', sourceUrl: streamUrl };
       };
       const preloadCount = Math.min(4, playlist.tracks.length);
