@@ -49,10 +49,11 @@ export class SidecarClient {
     await this.call('POST', '/peer/close', { id });
   }
 
-  async setSource(source: string, width?: number, height?: number, framerate?: number, bitrate?: string, audioSource?: string): Promise<void> {
+  async setSource(source: string, width?: number, height?: number, framerate?: number, bitrate?: string, audioSource?: string, headers?: string): Promise<void> {
     await this.call('POST', '/source', {
       source,
       audioSource,
+      headers,
       width,
       height,
       framerate,

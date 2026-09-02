@@ -848,7 +848,7 @@ func (s *Sidecar) ClosePeer(id string) {
 	s.peersLock.Unlock()
 }
 
-func (s *Sidecar) StartFFmpeg(source string, audioSource string, width int, height int, framerate int, bitrate string) {
+func (s *Sidecar) StartFFmpeg(source string, audioSource string, headers string, width int, height int, framerate int, bitrate string) {
 	s.ffmpegLock.Lock()
 	defer s.ffmpegLock.Unlock()
 
@@ -884,8 +884,14 @@ func (s *Sidecar) StartFFmpeg(source string, audioSource string, width int, heig
 			args = append(args, "-stream_loop", "-1")
 		}
 
+		if headers != "" {
+			args = append(args, "-headers", headers)
+		}
 		args = append(args, "-fflags", "+genpts+discardcorrupt", "-re", "-i", source)
 		if audioSource != "" {
+			if headers != "" {
+				args = append(args, "-headers", headers)
+			}
 			args = append(args, "-re", "-i", audioSource)
 		}
 	} else {
@@ -911,6 +917,7 @@ func (s *Sidecar) StartFFmpeg(source string, audioSource string, width int, heig
 	args = append(args,
 		"-pix_fmt", "yuv420p",
 		"-c:v", "libvpx",
+		"-threads", "2",
 		"-cpu-used", "6",
 		"-deadline", "realtime",
 		"-lag-in-frames", "0",
@@ -1116,6 +1123,7 @@ func main() {
 		var req struct {
 			Source      string `json:"source"`
 			AudioSource string `json:"audioSource"`
+			Headers     string `json:"headers"`
 			Width       int    `json:"width"`
 			Height      int    `json:"height"`
 			Framerate   int    `json:"framerate"`
@@ -1126,7 +1134,7 @@ func main() {
 			return
 		}
 		log.Printf("[API] Setting source: %s audio=%t (%dx%d @ %dfps)", req.Source, req.AudioSource != "", req.Width, req.Height, req.Framerate)
-		sidecar.StartFFmpeg(req.Source, req.AudioSource, req.Width, req.Height, req.Framerate, req.Bitrate)
+		sidecar.StartFFmpeg(req.Source, req.AudioSource, req.Headers, req.Width, req.Height, req.Framerate, req.Bitrate)
 		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 	})
 

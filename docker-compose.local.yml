@@ -37,6 +37,8 @@ services:
       - SIDECAR_PORT=9800
     expose:
       - "9800"
+    ports:
+      - "9800:9800"
     networks:
       - ts6-network
 

@@ -11,9 +11,15 @@ import { getVideoCookieArgs, getVideoPlatform } from './audio/video-source.js';
 import { spawn } from 'child_process';
 
 /** Resolve a YouTube/yt-dlp-compatible URL to a direct stream URL */
-type ResolvedVideoSource = { video: string; audio?: string };
+type ResolvedVideoSource = { video: string; audio?: string; headers?: string };
 function resolveVideoUrl(url: string, maxHeight: number = 720): Promise<ResolvedVideoSource> {
-  const trimmedUrl = url.trim();
+  // Chat clients and the WebUI may submit a rendered Markdown link instead
+  // of the raw URL: [https://...](https://...). Always extract the target.
+  const rawUrl = url.trim();
+  const markdownMatch = rawUrl.match(/^\[[^\]]+\]\((https?:\/\/[^\s)]+)\)$/i);
+  const trimmedUrl = (markdownMatch?.[1] ?? rawUrl)
+    .replace(/^<|>$/g, '')
+    .trim();
   const bvMatch = trimmedUrl.match(/^BV[0-9A-Za-z]{8,}$/i);
   const normalizedUrl = bvMatch ? `https://www.bilibili.com/video/${bvMatch[0]}` : trimmedUrl;
   // Only resolve YouTube and other yt-dlp-supported sites
@@ -28,7 +34,7 @@ function resolveVideoUrl(url: string, maxHeight: number = 720): Promise<Resolved
     // YouTube-friendly preference for other platforms, but allow any usable
     // Bilibili format instead of rejecting the source before Sidecar starts.
     const formatFilter = isBilibili
-      ? `bestvideo[height<=${maxHeight}]+bestaudio/bestvideo+bestaudio/best`
+      ? `bestvideo[height<=${maxHeight}][fps<=30]+bestaudio/bestvideo[height<=${maxHeight}]+bestaudio/bestvideo+bestaudio/best`
       : `best[height<=${maxHeight}][ext=mp4]/best[height<=${maxHeight}]/best[ext=mp4]/best`;
     const platformHeaders = isBilibili
       ? ['--add-header', 'Referer:https://www.bilibili.com/', '--add-header', 'User-Agent:Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36']
@@ -58,7 +64,11 @@ function resolveVideoUrl(url: string, maxHeight: number = 720): Promise<Resolved
         return reject(new Error('yt-dlp returned no URL'));
       }
       console.log(`[VideoResolve] Resolved: ${normalizedUrl.substring(0, 60)}... → direct URL`);
-      resolve({ video: directUrl, audio: directUrls[1] });
+      resolve({
+        video: directUrl,
+        audio: directUrls[1],
+        ...(isBilibili ? { headers: 'Referer: https://www.bilibili.com/\r\nOrigin: https://www.bilibili.com\r\nUser-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36\r\n' } : {}),
+      } as ResolvedVideoSource & { headers?: string });
     });
 
     proc.on('error', (err) => {
@@ -883,6 +893,7 @@ export class VoiceBot extends EventEmitter {
       effectiveFramerate,
       effectiveBitrate,
       resolvedSource.audio,
+      resolvedSource.headers,
     );
 
     console.log(`[VoiceBot ${this.config.id}] Video stream started: ${stream.id}, source: ${source}`);
@@ -950,6 +961,7 @@ export class VoiceBot extends EventEmitter {
       this._videoFramerate,
       this._videoBitrate,
       resolvedSource.audio,
+      resolvedSource.headers,
     );
     console.log(`[VoiceBot ${this.config.id}] Video source changed: ${source}`);
     this.emit('videoSourceChanged', source);
