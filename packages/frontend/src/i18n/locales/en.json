@@ -118,10 +118,13 @@
     "banReason": "Banned by admin",
     "banned": "Banned {{name}}",
     "col": {
+      "index": "No.",
       "country": "Country",
+      "channel": "Channel",
       "ip": "IP Address",
       "idle": "Idle",
       "nickname": "Nickname",
+      "platformVersion": "Platform / Version",
       "status": "Status"
     },
     "kickReason": "Kicked by admin",
@@ -148,6 +151,25 @@
     },
     "copyIp": "Copy IP address",
     "ipCopied": "IP address copied",
+    "details": {
+      "title": "Client details: {{name}}",
+      "clid": "Connection ID",
+      "cldbid": "Database ID",
+      "nickname": "Nickname",
+      "uniqueId": "Unique ID",
+      "version": "Client version",
+      "platform": "Platform",
+      "loginName": "Login name",
+      "totalConnections": "Total connections",
+      "description": "Description",
+      "monthUploaded": "Uploaded this month",
+      "monthDownloaded": "Downloaded this month",
+      "totalUploaded": "Total uploaded",
+      "totalDownloaded": "Total downloaded",
+      "connectedTime": "Connected time",
+      "sentBandwidth": "Send bandwidth",
+      "receivedBandwidth": "Receive bandwidth"
+    },
     "title": "Clients"
   },
   "groups": {

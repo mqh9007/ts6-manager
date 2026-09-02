@@ -21,6 +21,15 @@ export function useClientDatabase() {
   });
 }
 
+export function useClientInfo(clid: number | null) {
+  const { selectedConfigId: c, selectedSid: s } = useServerStore();
+  return useQuery({
+    queryKey: ['client-info', c, s, clid],
+    queryFn: () => clientsApi.get(c!, s!, clid!),
+    enabled: !!c && !!s && clid !== null,
+  });
+}
+
 export function useKickClient() {
   const qc = useQueryClient();
   const { selectedConfigId: c, selectedSid: s } = useServerStore();

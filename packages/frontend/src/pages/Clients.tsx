@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { useClients, useKickClient, useBanClient, usePokeClient } from '@/hooks/use-clients';
+import { useClients, useClientInfo, useKickClient, useBanClient, usePokeClient } from '@/hooks/use-clients';
+import { useChannels } from '@/hooks/use-channels';
 import { useServerStore } from '@/stores/server.store';
 import { useAuthStore } from '@/stores/auth.store';
 import { DataTable } from '@/components/shared/DataTable';
@@ -17,6 +18,16 @@ import { type ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 
+function countryFlag(country: string | undefined) {
+  const code = String(country || '').trim().toUpperCase();
+  if (/^[A-Z]{2}$/.test(code)) {
+    let label = code;
+    try { label = new Intl.DisplayNames(['zh-CN'], { type: 'region' }).of(code) || code; } catch { /* unsupported browser locale data */ }
+    return { flag: String.fromCodePoint(...[...code].map((char) => 0x1f1e6 + char.charCodeAt(0) - 65)), label };
+  }
+  return { flag: '', label: code || '-' };
+}
+
 export default function Clients() {
   const { t } = useTranslation();
   const { selectedConfigId, selectedSid } = useServerStore();
@@ -25,6 +36,10 @@ export default function Clients() {
   const kickClient = useKickClient();
   const banClient = useBanClient();
   const pokeClient = usePokeClient();
+  const { data: channelData } = useChannels();
+  const [detailClient, setDetailClient] = useState<any | null>(null);
+  const { data: detail, isLoading: detailLoading } = useClientInfo(detailClient?.clid ?? null);
+  const detailClientData = Array.isArray(detail) ? detail[0] : detail;
   const copyIp = (ip: string) => { void navigator.clipboard.writeText(ip).then(() => toast.success(t('clients.ipCopied'))); };
 
   const [pokeTarget, setPokeTarget] = useState<{ clid: number; name: string } | null>(null);
@@ -34,9 +49,15 @@ export default function Clients() {
     if (!data || !Array.isArray(data)) return [];
     return data.filter((c: any) => String(c.client_type) === '0');
   }, [data]);
+  const channelNames = useMemo(() => new Map((Array.isArray(channelData) ? channelData : []).map((c: any) => [Number(c.cid), c.channel_name])), [channelData]);
 
   const columns: ColumnDef<any>[] = useMemo(() => {
     const cols: ColumnDef<any>[] = [
+      {
+        id: 'index',
+        header: t('clients.col.index'),
+        cell: ({ row }) => <span className="font-mono-data text-xs text-muted-foreground">{row.index + 1}</span>,
+      },
       {
         accessorKey: 'client_nickname',
         header: t('clients.col.nickname'),
@@ -45,23 +66,30 @@ export default function Clients() {
             <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-mono-data text-primary">
               {row.original.client_nickname?.[0]?.toUpperCase() || '?'}
             </div>
-            <span className="font-medium">{row.original.client_nickname}</span>
+            <button type="button" className="font-medium hover:text-primary hover:underline" onClick={() => setDetailClient(row.original)}>{row.original.client_nickname}</button>
           </div>
         ),
-      },
-      {
-        accessorKey: 'client_country',
-        header: t('clients.col.country'),
-        cell: ({ getValue }) => <span className="font-mono-data text-xs">{(getValue() as string) || '-'}</span>,
       },
       ...(isAdmin ? [{
         accessorKey: 'connection_client_ip',
         header: t('clients.col.ip'),
         cell: ({ row }: any) => {
           const ip = row.original.connection_client_ip || '-';
-          return <div className="flex items-center gap-1 font-mono-data text-xs"><span>{ip}</span>{ip !== '-' && <Button variant="ghost" size="icon" className="h-6 w-6" aria-label={t('clients.copyIp')} onClick={() => copyIp(ip)}><Copy className="h-3 w-3" /></Button>}</div>;
+          const country = countryFlag(row.original.client_country);
+          return <div className="flex items-center gap-1"><span className="text-sm leading-none" title={country.label}>{country.flag || country.label}</span><span className="font-mono-data text-xs">{ip}</span>{ip !== '-' && <Button variant="ghost" size="icon" className="h-6 w-6 opacity-60 hover:opacity-100" aria-label={t('clients.copyIp')} onClick={() => copyIp(ip)}><Copy className="h-3 w-3" /></Button>}</div>;
         },
       }] : []),
+      {
+        id: 'platformVersion',
+        header: t('clients.col.platformVersion'),
+        accessorFn: (row: any) => row.client_platform && row.client_version ? `${row.client_platform}-${row.client_version}` : '',
+        cell: ({ row }: any) => <span className="font-mono-data text-xs">{row.original.client_platform && row.original.client_version ? `${row.original.client_platform}-${row.original.client_version}` : '-'}</span>,
+      },
+      {
+        accessorKey: 'cid',
+        header: t('clients.col.channel'),
+        cell: ({ row }) => <span className="text-xs">{channelNames.get(Number(row.original.cid)) || `#${row.original.cid}`}</span>,
+      },
       {
         accessorKey: 'client_idle_time',
         header: t('clients.col.idle'),
@@ -116,7 +144,7 @@ export default function Clients() {
       });
     }
     return cols;
-  }, [t, isAdmin, kickClient, banClient]);
+  }, [t, isAdmin, kickClient, banClient, channelNames]);
 
   if (!selectedConfigId || !selectedSid) return <EmptyState icon={Users} title={t('clients.noServer')} />;
   if (isLoading) return <PageLoader />;
@@ -131,6 +159,14 @@ export default function Clients() {
       </div>
 
       <DataTable columns={columns} data={clients} searchKey="client_nickname" searchPlaceholder={t('clients.search')} />
+
+      <Dialog open={!!detailClient} onOpenChange={(open) => !open && setDetailClient(null)}>
+        <DialogContent className="max-w-2xl"><DialogHeader><DialogTitle>{t('clients.details.title', { name: detailClient?.client_nickname })}</DialogTitle></DialogHeader>
+          {detailLoading ? <PageLoader /> : <div className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2 text-sm">{[
+            ['clid', t('clients.details.clid')], ['client_database_id', t('clients.details.cldbid')], ['client_nickname', t('clients.details.nickname')], ['client_unique_identifier', t('clients.details.uniqueId')], ['client_version', t('clients.details.version')], ['client_platform', t('clients.details.platform')], ['client_login_name', t('clients.details.loginName')], ['client_totalconnections', t('clients.details.totalConnections')], ['client_description', t('clients.details.description')], ['client_month_bytes_uploaded', t('clients.details.monthUploaded')], ['client_month_bytes_downloaded', t('clients.details.monthDownloaded')], ['client_total_bytes_uploaded', t('clients.details.totalUploaded')], ['client_total_bytes_downloaded', t('clients.details.totalDownloaded')], ['connection_connected_time', t('clients.details.connectedTime')], ['connection_bandwidth_sent_last_second_total', t('clients.details.sentBandwidth')], ['connection_bandwidth_received_last_second_total', t('clients.details.receivedBandwidth')],
+          ].map(([key, label]) => { const value = String(detailClientData?.[key] ?? '-'); return <div key={key} className="flex min-w-0 justify-between gap-3 rounded-md bg-muted/30 px-3 py-2"><span className="text-muted-foreground">{label}</span><span className="max-w-[65%] truncate text-right font-mono-data" title={value}>{value}</span></div>; })}</div>}
+        </DialogContent>
+      </Dialog>
 
       {/* Poke Dialog */}
       <Dialog open={!!pokeTarget} onOpenChange={() => setPokeTarget(null)}>
