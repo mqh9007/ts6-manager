@@ -174,9 +174,9 @@ export class MusicCommandHandler {
     this.reply(bot, userClid, [
       '音乐机器人命令：',
       '!help / !帮助 —— 显示帮助',
-      '!play / !播放 <歌曲名> —— 搜索并播放音乐',
+      '!play / !播放 <歌曲名> [歌手] —— 搜索并立即播放音乐',
       '!bv / !视频 <B站链接或BV号> —— 播放B站视频音频',
-      '!playlist / !歌单 <歌单链接> —— 播放网易云或酷我歌单',
+      '!playlist / !歌单 <歌单链接> [random|随机] —— 顺序或随机播放歌单',
       '!radio / !电台 [编号] —— 查看或播放电台',
       '!pause / !暂停 —— 暂停或恢复播放',
       '!stop / !停止 —— 停止播放',
@@ -252,7 +252,7 @@ export class MusicCommandHandler {
         this.reply(bot, userClid, '已恢复播放。');
         return;
       }
-      this.reply(bot, userClid, '用法：!play <歌曲名称>');
+      this.reply(bot, userClid, '用法：!play <歌曲名称> [歌手]');
       return;
     }
 
@@ -266,7 +266,10 @@ export class MusicCommandHandler {
     try {
       if (!args.startsWith('http://') && !args.startsWith('https://')) {
         const sourceService = new MusicSourceService(this.prisma);
-        const results = await sourceService.search(args);
+        const searchParts = args.split(/\s+/);
+        const artist = searchParts.length > 1 ? searchParts.pop()! : '';
+        const title = searchParts.join(' ');
+        const results = await sourceService.search(artist ? `${title} ${artist}` : title);
         const song = results[0];
         if (!song) throw new Error('No matching song found');
         const streamUrl = await sourceService.resolve(song);
@@ -308,14 +311,22 @@ export class MusicCommandHandler {
   }
 
   private async handlePlaylist(bot: VoiceBot, userClid: number, args: string): Promise<void> {
-    if (!args || !/^https?:\/\//i.test(args)) {
-      this.reply(bot, userClid, '用法：!playlist <网易云或酷我歌单链接>');
+    const [playlistUrl, mode] = args.split(/\s+/);
+    if (!playlistUrl || !/^https?:\/\//i.test(playlistUrl)) {
+      this.reply(bot, userClid, '用法：!playlist <网易云或酷我歌单链接> [random|随机]');
       return;
     }
     this.reply(bot, userClid, '正在解析歌单，请稍候...');
     try {
       const service = new MusicSourceService(this.prisma);
-      const playlist = await service.playlist(args);
+      const playlist = await service.playlist(playlistUrl);
+      const randomMode = /^(random|shuffle|随机)$/i.test(mode || '');
+      if (randomMode) {
+        for (let i = playlist.tracks.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [playlist.tracks[i], playlist.tracks[j]] = [playlist.tracks[j], playlist.tracks[i]];
+        }
+      }
       const downloadSong = async (index: number): Promise<QueueItem> => {
         const song = playlist.tracks[index];
         const streamUrl = await service.resolve(song);
@@ -332,7 +343,7 @@ export class MusicCommandHandler {
       bot.queue.addMany(firstBatch);
       bot.queue.playAt(0);
       await bot.play(firstBatch[0]);
-      this.reply(bot, userClid, `已开始播放歌单「${playlist.title}」，已预载 ${firstBatch.length - 1} 首，共 ${playlist.tracks.length} 首${firstSkipped ? `，已跳过 ${firstSkipped} 首不可用歌曲` : ''}`);
+      this.reply(bot, userClid, `已开始${randomMode ? '随机' : '顺序'}播放歌单「${playlist.title}」，已预载 ${firstBatch.length - 1} 首，共 ${playlist.tracks.length} 首${firstSkipped ? `，已跳过 ${firstSkipped} 首不可用歌曲` : ''}`);
 
       // Continue filling the queue in order while playback is running.
       void (async () => {
@@ -357,11 +368,14 @@ export class MusicCommandHandler {
   }
 
   private async enqueueOrPlay(bot: VoiceBot, userClid: number, queueItem: QueueItem): Promise<void> {
-    bot.queue.add(queueItem);
     this.saveMusicRequest(bot, queueItem);
     if (bot.status === 'playing' || bot.status === 'paused') {
-      this.reply(bot, userClid, `已加入队列：${queueItem.artist ? `${queueItem.artist} - ` : ''}${queueItem.title}（队列位置 #${bot.queue.length}）`);
+      const insertAt = bot.queue.addNext(queueItem);
+      bot.queue.playAt(insertAt);
+      await bot.play(queueItem);
+      this.reply(bot, userClid, `已插入下一首并开始播放：${queueItem.artist ? `${queueItem.artist} - ` : ''}${queueItem.title}`);
     } else {
+      bot.queue.add(queueItem);
       bot.queue.playAt(bot.queue.length - 1);
       await bot.play(queueItem);
       this.reply(bot, userClid, `正在播放：${queueItem.artist ? `${queueItem.artist} - ` : ''}${queueItem.title}`);

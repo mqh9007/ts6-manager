@@ -64,6 +64,17 @@ export class PlayQueue {
     }
   }
 
+  /** Insert a manually requested item immediately after the current item. */
+  addNext(item: QueueItem): number {
+    const insertAt = this.currentIndex >= 0 ? this.currentIndex + 1 : this.items.length;
+    this.items.splice(insertAt, 0, item);
+    if (this._shuffle) {
+      this.shuffleOrder = this.shuffleOrder.map((index) => index >= insertAt ? index + 1 : index);
+      this.shuffleOrder.splice(this.currentIndex + 1, 0, insertAt);
+    }
+    return insertAt;
+  }
+
   remove(id: string): boolean {
     const idx = this.items.findIndex((item) => item.id === id);
     if (idx < 0) return false;
