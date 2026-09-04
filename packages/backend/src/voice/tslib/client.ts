@@ -113,6 +113,7 @@ export class Ts3Client extends EventEmitter {
 
   // Client ID assigned by server
   private clientId = 0;
+  private currentChannelId = 0;
 
   // Fragment reassembly
   private fragmentBuffer: Buffer[] = [];
@@ -750,6 +751,11 @@ export class Ts3Client extends EventEmitter {
           this.cleanup();
         }
         break;
+      case "notifyclientmoved":
+        if (parseInt(parsed.params.clid || "0") === this.clientId) {
+          this.currentChannelId = parseInt(parsed.params.ctid || parsed.params.cid || "0");
+        }
+        break;
       case "notifytextmessage":
         this.emit("textMessage", parsed.params);
         break;
@@ -957,8 +963,13 @@ export class Ts3Client extends EventEmitter {
       clid: this.clientId,
       cpw: this.opts.channelPassword ?? "",
     });
+    this.currentChannelId = cid;
     this.emit("debug", `Moving to channel "${target}" (cid=${cid})`);
     this.sendCommand(moveCmd);
+  }
+
+  getCurrentChannelId(): number {
+    return this.currentChannelId;
   }
 
   // ====== Resend Loop ======

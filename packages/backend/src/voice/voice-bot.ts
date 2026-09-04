@@ -245,10 +245,14 @@ export class VoiceBot extends EventEmitter {
     return this.client.getClientId();
   }
 
-  sendTextMessage(targetClid: number, msg: string): void {
+  get currentChannelId(): number {
+    return this.client.getCurrentChannelId();
+  }
+
+  sendTextMessage(targetClid: number, msg: string, targetMode: number = 1, target?: number): void {
     const cmd = buildCommand('sendtextmessage', {
-      targetmode: 1,
-      target: targetClid,
+      targetmode: targetMode,
+      target: target ?? targetClid,
       msg,
     });
     this.client.sendCommand(cmd);

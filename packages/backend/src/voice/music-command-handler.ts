@@ -10,10 +10,19 @@ const MUSIC_DIR = config.musicDir;
 const CMD_PREFIX = '!';
 
 const MUSIC_COMMANDS = new Set([
+  'help',
   'radio', 'play', 'bv', 'playlist', 'stop', 'pause', 'skip', 'next', 'prev',
   'vol', 'volume', 'np', 'nowplaying', 'queue', 'add',
   'stream', 'stopstream', 'viewers',
 ]);
+
+const COMMAND_ALIASES: Record<string, string> = {
+  '帮助': 'help', '菜单': 'help',
+  '电台': 'radio', '播放': 'play', '视频': 'bv', '歌单': 'playlist',
+  '停止': 'stop', '暂停': 'pause', '跳过': 'skip', '下一首': 'next', '上一首': 'prev',
+  '音量': 'vol', '当前播放': 'np', '正在播放': 'np', '队列': 'queue', '添加': 'add',
+  '推流': 'stream', '停止推流': 'stopstream', '观看者': 'viewers',
+};
 
 /**
  * Handles text-based music commands (!radio, !play, !stop, etc.)
@@ -24,6 +33,7 @@ const MUSIC_COMMANDS = new Set([
  */
 export class MusicCommandHandler {
   private registeredBots = new Set<number>();
+  private replyTargets = new WeakMap<VoiceBot, { mode: number; target: number }>();
 
   constructor(
     private prisma: PrismaClient,
@@ -56,7 +66,8 @@ export class MusicCommandHandler {
     if (!msg.startsWith(CMD_PREFIX)) return;
 
     const parts = msg.substring(CMD_PREFIX.length).split(/\s+/);
-    const command = parts[0].toLowerCase();
+    const requestedCommand = parts[0].toLowerCase();
+    const command = COMMAND_ALIASES[requestedCommand] || requestedCommand;
     if (!MUSIC_COMMANDS.has(command)) return;
 
     const args = parts.slice(1).join(' ').trim();
@@ -66,10 +77,23 @@ export class MusicCommandHandler {
     // Ignore messages from ourselves (the bot)
     if (userClid === bot.ts3ClientId) return;
 
+    const targetMode = parseInt(data.targetmode || '1');
+    // ServerQuery protocol: targetmode=2 always means the query client's
+    // current channel and ignores target. Do not require a channel ID from
+    // notifytextmessage; it is normally not included in that event.
+    this.replyTargets.set(bot, targetMode === 2
+      ? { mode: 2, target: 0 }
+      : targetMode === 3
+        ? { mode: 3, target: 0 }
+        : { mode: 1, target: userClid });
+
     console.log(`[MusicCmd] Bot ${botId}: !${command} ${args} (from clid=${userClid})`);
 
     try {
       switch (command) {
+        case 'help':
+          this.handleHelp(bot, userClid);
+          break;
         case 'radio':
           await this.handleRadio(botId, bot, userClid, args);
           break;
@@ -120,15 +144,40 @@ export class MusicCommandHandler {
     } catch (err: any) {
       console.error(`[MusicCmd] Error handling !${command}: ${err.message}`);
       this.reply(bot, userClid, `错误：${err.message}`);
+    } finally {
+      this.replyTargets.delete(bot);
     }
   }
 
   private reply(bot: VoiceBot, targetClid: number, msg: string): void {
     try {
-      bot.sendTextMessage(targetClid, msg);
+      const target = this.replyTargets.get(bot) || { mode: 1, target: targetClid };
+      bot.sendTextMessage(target.target, msg, target.mode, target.target);
     } catch (err: any) {
       console.error(`[MusicCmd] Failed to send reply: ${err.message}`);
     }
+  }
+
+  private handleHelp(bot: VoiceBot, userClid: number): void {
+    this.reply(bot, userClid, [
+      '音乐机器人命令：',
+      '!help / !帮助 —— 显示帮助',
+      '!play / !播放 <歌曲名> —— 搜索并播放音乐',
+      '!bv / !视频 <B站链接或BV号> —— 播放B站视频音频',
+      '!playlist / !歌单 <歌单链接> —— 播放网易云或酷我歌单',
+      '!radio / !电台 [编号] —— 查看或播放电台',
+      '!pause / !暂停 —— 暂停或恢复播放',
+      '!stop / !停止 —— 停止播放',
+      '!skip / !跳过、!next / !下一首 —— 播放下一首',
+      '!prev / !上一首 —— 播放上一首',
+      '!vol / !音量 <0-100> —— 设置音量',
+      '!np / !当前播放 —— 查看当前播放',
+      '!queue / !队列 [show|play|remove|clear] —— 管理播放队列',
+      '!add / !添加 <B站链接> —— 添加视频到队列',
+      '!stream / !推流 <链接> [清晰度] —— 启动视频推流',
+      '!stopstream / !停止推流 —— 停止视频推流',
+      '!viewers / !观看者 —— 查看视频观看者',
+    ].join('\n'));
   }
 
   // ─── Command Handlers ───────────────────────────────────────
@@ -326,6 +375,7 @@ export class MusicCommandHandler {
   }
 
   private async handleQueue(bot: VoiceBot, userClid: number, args: string): Promise<void> {
+    args = args.replace(/^(查看|显示)\b/i, 'show').replace(/^(播放)\b/i, 'play').replace(/^(移除|删除)\b/i, 'remove').replace(/^(清空)\b/i, 'clear').trim();
     // No args or "show" — display current queue
     if (!args || args.toLowerCase() === 'show') {
       this.showQueue(bot, userClid);
