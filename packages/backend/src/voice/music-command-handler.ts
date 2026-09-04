@@ -152,10 +152,22 @@ export class MusicCommandHandler {
   private reply(bot: VoiceBot, targetClid: number, msg: string): void {
     try {
       const target = this.replyTargets.get(bot) || { mode: 1, target: targetClid };
-      bot.sendTextMessage(target.target, msg, target.mode, target.target);
+      bot.sendTextMessage(target.target, this.formatReply(msg), target.mode, target.target);
     } catch (err: any) {
       console.error(`[MusicCmd] Failed to send reply: ${err.message}`);
     }
+  }
+
+  /** Apply TeamSpeak BBCode consistently to command responses. */
+  private formatReply(msg: string): string {
+    const text = msg.trim();
+    if (!text) return text;
+
+    const isError = /失败|错误|无效|未找到|没有|不可用|超时|不支持/.test(text);
+    const color = isError ? '#ff6b6b' : '#7dd3fc';
+    const lines = text.split('\n');
+    const first = lines.shift() || '';
+    return `[color=${color}][b]${first}[/b][/color]${lines.length ? `\n${lines.join('\n')}` : ''}`;
   }
 
   private handleHelp(bot: VoiceBot, userClid: number): void {
