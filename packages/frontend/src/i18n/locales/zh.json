@@ -17,11 +17,6 @@
     "search": "搜索...",
     "update": "更新"
   },
-  "language": {
-    "chinese": "中文",
-    "english": "English",
-    "switch": "语言"
-  },
   "pagination": {
     "page": "{{page}} / {{total}}",
     "results": "{{count}} 条结果"
@@ -134,7 +129,7 @@
       "country": "国家/地区",
       "channel": "当前频道",
       "ip": "IP 地址",
-      "idle": "空闲",
+      "idle": "空闲时长",
       "nickname": "昵称",
       "platformVersion": "客户端平台/版本",
       "status": "状态",

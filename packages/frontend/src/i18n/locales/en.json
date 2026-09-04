@@ -17,11 +17,6 @@
     "search": "Search...",
     "update": "Update"
   },
-  "language": {
-    "chinese": "中文",
-    "english": "English",
-    "switch": "Language"
-  },
   "pagination": {
     "page": "{{page}} / {{total}}",
     "results": "{{count}} result(s)"
@@ -134,7 +129,7 @@
       "country": "Country",
       "channel": "Channel",
       "ip": "IP Address",
-      "idle": "Idle",
+      "idle": "Idle Duration",
       "nickname": "Nickname",
       "platformVersion": "Platform / Version",
       "status": "Status",

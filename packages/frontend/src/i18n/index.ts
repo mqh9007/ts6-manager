@@ -3,12 +3,38 @@ import { initReactI18next } from 'react-i18next';
 import en from './locales/en.json';
 import zh from './locales/zh.json';
 
+/**
+ * Detect the UI language from the user's system/browser settings.
+ *
+ * Only Chinese (`zh`) and English (`en`) are supported. Any Chinese variant
+ * (zh-CN, zh-TW, zh-HK, ...) resolves to Chinese; every other language
+ * falls back to English.
+ */
+function detectSystemLanguage(): 'zh' | 'en' {
+  if (typeof navigator === 'undefined') return 'en';
+
+  // navigator.languages is the preferred ordered list; fall back to navigator.language.
+  const languages =
+    navigator.languages && navigator.languages.length > 0
+      ? navigator.languages
+      : [navigator.language || 'en'];
+
+  for (const lang of languages) {
+    if (lang && lang.toLowerCase().startsWith('zh')) {
+      return 'zh';
+    }
+  }
+  return 'en';
+}
+
+const detectedLanguage = detectSystemLanguage();
+
 i18n.use(initReactI18next).init({
   resources: {
     en: { translation: en },
     zh: { translation: zh },
   },
-  lng: 'en',
+  lng: detectedLanguage,
   fallbackLng: 'en',
   supportedLngs: ['en', 'zh'],
   interpolation: {
@@ -16,18 +42,12 @@ i18n.use(initReactI18next).init({
   },
 });
 
-// Resolve the persisted locale after ui.store is ready (avoids circular import)
-import('@/stores/ui.store').then(({ useUiStore }) => {
-  const locale = useUiStore.getState().locale;
-  if (locale && locale !== i18n.language) {
-    i18n.changeLanguage(locale);
-  }
-  // Re-apply language whenever it changes after init
-  useUiStore.subscribe((state, prev) => {
-    if (state.locale !== prev.locale && state.locale !== i18n.language) {
-      i18n.changeLanguage(state.locale);
-    }
+// Keep the <html lang="..."> attribute in sync with the active language.
+if (typeof document !== 'undefined') {
+  document.documentElement.lang = detectedLanguage;
+  i18n.on('languageChanged', (lng) => {
+    document.documentElement.lang = lng;
   });
-});
+}
 
 export default i18n;
