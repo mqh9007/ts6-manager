@@ -3,6 +3,9 @@ import http from 'http';
 import https from 'https';
 import { TSApiError } from '../middleware/error-handler.js';
 import { config } from '../config.js';
+import { logger } from '../utils/logger.js';
+
+const EMPTY_RESULT_COMMANDS = new Set(['banlist', 'privilegekeylist']);
 
 export class WebQueryClient {
   private http: AxiosInstance;
@@ -96,6 +99,10 @@ export class WebQueryClient {
 
       const data = response.data;
       if (data.status && data.status.code !== 0) {
+        if (data.status.code === 1281 && EMPTY_RESULT_COMMANDS.has(command)) {
+          logger.info('WebQuery', `${command} returned an empty result set; treating it as an empty list`, { sid });
+          return [];
+        }
         throw new TSApiError(data.status.code, data.status.message);
       }
 
@@ -120,6 +127,10 @@ export class WebQueryClient {
               : await this.http.post(path, null, { params: this.cleanParams(params) });
             const retryData = retryResponse.data;
             if (retryData.status && retryData.status.code !== 0) {
+              if (retryData.status.code === 1281 && EMPTY_RESULT_COMMANDS.has(command)) {
+                logger.info('WebQuery', `${command} returned an empty result set after retry; treating it as an empty list`, { sid, retry: true });
+                return [];
+              }
               throw new TSApiError(retryData.status.code, retryData.status.message);
             }
             return retryData.body || retryData;

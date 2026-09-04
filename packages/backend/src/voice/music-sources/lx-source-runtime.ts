@@ -3,6 +3,10 @@ import vm from 'node:vm';
 type LxRequestOptions = { method?: string; headers?: Record<string, string>; body?: any; timeout?: number };
 type LxRequestResult = { url: string; ok: boolean; statusCode?: number; error?: string };
 
+const DEFAULT_SOURCE_REQUEST_TIMEOUT_MS = 25_000;
+const MAX_SOURCE_REQUEST_TIMEOUT_MS = 30_000;
+const SOURCE_RESOLVE_TIMEOUT_MS = 60_000;
+
 function safeUrl(input: string): URL {
   const url = new URL(input);
   if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error('Only HTTP(S) music source requests are allowed');
@@ -15,15 +19,35 @@ function safeUrl(input: string): URL {
 
 async function sourceFetch(url: string, options: LxRequestOptions = {}): Promise<{ body: unknown; statusCode: number; headers: Record<string, string> }> {
   const target = safeUrl(url);
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), Math.min(Math.max(options.timeout || 8_000, 500), 12_000));
-  try {
-    const response = await fetch(target, { method: options.method || 'GET', headers: options.headers, body: options.body, signal: controller.signal, redirect: 'follow' });
-    const text = await response.text();
-    let body: unknown = text;
-    try { body = JSON.parse(text); } catch { /* source may expect text */ }
-    return { body, statusCode: response.status, headers: Object.fromEntries(response.headers.entries()) };
-  } finally { clearTimeout(timer); }
+  const method = (options.method || 'GET').toUpperCase();
+  // Community sources commonly declare 8 seconds, which is too short for
+  // cross-region music APIs. Treat a source value as a requested extension,
+  // never as a shorter limit than the service baseline.
+  const timeoutMs = Math.min(Math.max(options.timeout || 0, DEFAULT_SOURCE_REQUEST_TIMEOUT_MS), MAX_SOURCE_REQUEST_TIMEOUT_MS);
+  const attempts = method === 'GET' || method === 'HEAD' ? 2 : 1;
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(target, { method, headers: options.headers, body: options.body, signal: controller.signal, redirect: 'follow' });
+      const text = await response.text();
+      let body: unknown = text;
+      try { body = JSON.parse(text); } catch { /* source may expect text */ }
+      return { body, statusCode: response.status, headers: Object.fromEntries(response.headers.entries()) };
+    } catch (error) {
+      lastError = error;
+      if (attempt + 1 < attempts) await new Promise((resolve) => setTimeout(resolve, 500));
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  if (lastError instanceof Error && lastError.name === 'AbortError') {
+    throw new Error(`音乐源请求超时（${Math.round(timeoutMs / 1000)} 秒）`);
+  }
+  throw lastError;
 }
 
 /** Runs the LX Music source initialization and reports its externally reachable services. */
@@ -44,7 +68,12 @@ export async function testLxMusicSource(code: string): Promise<{ initialized: bo
     });
     pending.push(task);
   };
-  const sandbox = { btoa: globalThis.btoa, lx: { EVENT_NAMES: eventNames, request, on: () => undefined, send: (event: string) => { if (event === eventNames.inited) initialized = true; }, env: { platform: 'server' } } };
+  const sandbox = {
+    btoa: globalThis.btoa,
+    setTimeout,
+    clearTimeout,
+    lx: { EVENT_NAMES: eventNames, request, on: () => undefined, send: (event: string) => { if (event === eventNames.inited) initialized = true; }, env: { platform: 'server' } },
+  };
   vm.runInNewContext(code, sandbox, { timeout: 1_500, filename: 'music-source.js' });
   await Promise.race([Promise.allSettled(pending), new Promise((resolve) => setTimeout(resolve, 12_500))]);
   return { initialized, requests };
@@ -61,6 +90,8 @@ export async function resolveLxMusicUrl(code: string, platform: string, musicInf
   };
   const sandbox = {
     btoa: globalThis.btoa,
+    setTimeout,
+    clearTimeout,
     lx: {
       EVENT_NAMES: eventNames,
       request,
@@ -73,7 +104,7 @@ export async function resolveLxMusicUrl(code: string, platform: string, musicInf
   if (!requestHandler) throw new Error('Music source does not provide a request handler');
   const result = await Promise.race([
     Promise.resolve(requestHandler({ action: 'musicUrl', source: platform, info: { musicInfo, type: quality } })),
-    new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Music source request timed out')), 15_000)),
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error('音乐源解析歌曲地址超时，请稍后重试')), SOURCE_RESOLVE_TIMEOUT_MS)),
   ]);
   if (typeof result !== 'string' || !result.startsWith('http')) throw new Error('Music source did not return a playable URL');
   return result;

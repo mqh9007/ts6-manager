@@ -19,3 +19,4 @@ build-and-push-images.sh
 docker-compose.images.yml
 docker-compose.prod.yml
 docs/Teamspeak权限节点报文.md
+packages/frontend/tsconfig.tsbuildinfo

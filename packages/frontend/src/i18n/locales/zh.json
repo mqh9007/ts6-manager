@@ -88,6 +88,17 @@
     "form": {
       "name": "频道名称",
       "namePlaceholder": "新建频道",
+      "description": "频道描述",
+      "parent": "父频道",
+      "root": "服务器根目录",
+      "codec": "语音编码",
+      "voice": "Opus 语音",
+      "music": "Opus 音乐",
+      "quality": "音质（0-10）",
+      "talkPower": "所需发言权限",
+      "maxClients": "最大客户端数（-1 为不限）",
+      "maxFamilyClients": "频道树最大客户端数（-1 为不限）",
+      "permanent": "永久频道",
       "password": "密码",
       "passwordPlaceholder": "留空以保留当前密码",
       "saving": "保存中...",
@@ -104,6 +115,7 @@
       "deleted": "频道已删除",
       "moveFailed": "移动频道失败",
       "moved": "频道已移动",
+      "reordered": "频道顺序已更新",
       "updateFailed": "更新频道失败",
       "updated": "频道已更新"
     },
@@ -125,8 +137,10 @@
       "idle": "空闲",
       "nickname": "昵称",
       "platformVersion": "客户端平台/版本",
-      "status": "状态"
+      "status": "状态",
+      "onlineDuration": "在线时长"
     },
+    "duration": { "days": "天", "hours": "小时", "minutes": "分钟", "lessThanMinute": "不到 1 分钟" },
     "kickReason": "被管理员踢出",
     "kicked": "已踢出 {{name}}",
     "noServer": "未选择服务器",
@@ -166,9 +180,9 @@
       "monthDownloaded": "本月下载流量",
       "totalUploaded": "总上传流量",
       "totalDownloaded": "总下载流量",
-      "connectedTime": "本次连接时长",
-      "sentBandwidth": "发送带宽",
-      "receivedBandwidth": "接收带宽"
+      "connectedTime": "在线时长",
+      "sentBandwidth": "发送带宽（上一秒）",
+      "receivedBandwidth": "接收带宽（上一秒）"
     },
     "title": "客户端"
   },
@@ -519,6 +533,7 @@
         "reachable": "可访问",
         "unreachable": "无法访问",
         "testFailed": "测试失败",
+        "testKeyword": "测试歌曲：{{keyword}}",
         "moveUp": "上移",
         "moveDown": "下移",
         "remove": "移除",

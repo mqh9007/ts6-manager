@@ -12,6 +12,7 @@ import { AppError } from '../middleware/error-handler.js';
 import { setVideoCookieFile, getVideoCookieFile, type VideoPlatform } from '../voice/audio/video-source.js';
 import { parseLxMusicSource, type LxSourcePlatform } from '../voice/music-sources/lx-source-parser.js';
 import { testLxMusicSource } from '../voice/music-sources/lx-source-runtime.js';
+import { MusicSourceService } from '../voice/music-sources/music-source-service.js';
 
 const settingsRoutes: Router = Router();
 
@@ -117,8 +118,8 @@ settingsRoutes.post('/music-sources/:id/test', requireAdmin, async (req: Request
     if (!source) throw new AppError(404, 'Music source not found');
     const filePath = path.join(MUSIC_SOURCE_DIR, path.basename(source.fileName));
     if (!fs.existsSync(filePath)) throw new AppError(404, 'Music source script file not found');
-    const result = await testLxMusicSource(fs.readFileSync(filePath, 'utf8'));
-    res.json(result);
+    const sourceResult = await new MusicSourceService(req.app.locals.prisma).testSource(source);
+    res.json({ initialized: true, requests: sourceResult.platforms.map((item) => ({ url: item.id, ok: item.ok, error: item.message })), ...sourceResult });
   } catch (err) { next(err); }
 });
 

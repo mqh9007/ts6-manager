@@ -88,6 +88,17 @@
     "form": {
       "name": "Channel Name",
       "namePlaceholder": "New Channel",
+      "description": "Description",
+      "parent": "Parent Channel",
+      "root": "Server Root",
+      "codec": "Codec",
+      "voice": "Opus Voice",
+      "music": "Opus Music",
+      "quality": "Quality (0-10)",
+      "talkPower": "Needed Talk Power",
+      "maxClients": "Max Clients (-1 unlimited)",
+      "maxFamilyClients": "Max Family Clients (-1 unlimited)",
+      "permanent": "Permanent channel",
       "password": "Password",
       "passwordPlaceholder": "Leave empty to keep current",
       "saving": "Saving...",
@@ -104,6 +115,7 @@
       "deleted": "Channel deleted",
       "moveFailed": "Failed to move channel",
       "moved": "Channel moved",
+      "reordered": "Channel order updated",
       "updateFailed": "Failed to update channel",
       "updated": "Channel updated"
     },
@@ -125,8 +137,10 @@
       "idle": "Idle",
       "nickname": "Nickname",
       "platformVersion": "Platform / Version",
-      "status": "Status"
+      "status": "Status",
+      "onlineDuration": "Online Duration"
     },
+    "duration": { "days": "days", "hours": "hours", "minutes": "minutes", "lessThanMinute": "< 1 minute" },
     "kickReason": "Kicked by admin",
     "kicked": "Kicked {{name}}",
     "noServer": "No server selected",
@@ -166,9 +180,9 @@
       "monthDownloaded": "Downloaded this month",
       "totalUploaded": "Total uploaded",
       "totalDownloaded": "Total downloaded",
-      "connectedTime": "Connected time",
-      "sentBandwidth": "Send bandwidth",
-      "receivedBandwidth": "Receive bandwidth"
+      "connectedTime": "Online Duration",
+      "sentBandwidth": "Send Bandwidth (last second)",
+      "receivedBandwidth": "Receive Bandwidth (last second)"
     },
     "title": "Clients"
   },
@@ -522,6 +536,7 @@
         "reachable": "Music source is reachable",
         "unreachable": "Music source could not reach its services",
         "testFailed": "Music source test failed",
+        "testKeyword": "Test song: {{keyword}}",
         "orderFailed": "Failed to save source order",
         "preferenceFailed": "Failed to update playback preference",
         "removed": "Music source removed",

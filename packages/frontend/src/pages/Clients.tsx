@@ -28,6 +28,32 @@ function countryFlag(country: string | undefined) {
   return { flag: '', label: code || '-' };
 }
 
+function formatOnlineDuration(milliseconds: unknown, t: (key: string) => string) {
+  const totalMinutes = Math.floor((Number(milliseconds) || 0) / 60000);
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days} ${t('clients.duration.days')}`);
+  if (hours > 0) parts.push(`${hours} ${t('clients.duration.hours')}`);
+  if (minutes > 0) parts.push(`${minutes} ${t('clients.duration.minutes')}`);
+  return parts.join(' ') || t('clients.duration.lessThanMinute');
+}
+
+function formatBandwidth(bytesPerSecond: unknown) {
+  const value = Number(bytesPerSecond);
+  if (!Number.isFinite(value) || value < 0) return '-';
+  if (value < 1024) return `${Math.round(value)} B/s`;
+  const units = ['KB/s', 'MB/s', 'GB/s', 'TB/s'];
+  let amount = value;
+  let unitIndex = -1;
+  while (amount >= 1024 && unitIndex < units.length - 1) {
+    amount /= 1024;
+    unitIndex += 1;
+  }
+  return `${amount.toFixed(amount >= 10 ? 1 : 2)} ${units[unitIndex]}`;
+}
+
 export default function Clients() {
   const { t } = useTranslation();
   const { selectedConfigId, selectedSid } = useServerStore();
@@ -107,6 +133,21 @@ export default function Clients() {
           return <Badge variant="success" className="text-[10px]">{t('clients.status.active')}</Badge>;
         },
       },
+      {
+        id: 'onlineDuration',
+        header: t('clients.col.onlineDuration'),
+        accessorFn: (row: any) => row.connection_connected_time || row.client_lastconnected || 0,
+        cell: ({ row }) => {
+          const connectedTime = Number(row.original.connection_connected_time) || 0;
+          const lastConnected = Number(row.original.client_lastconnected) || 0;
+          const duration = connectedTime > 0
+            ? connectedTime
+            : lastConnected > 0
+              ? Math.max(0, Date.now() - lastConnected * 1000)
+              : 0;
+          return <span className="font-mono-data text-xs text-muted-foreground">{formatOnlineDuration(duration, t)}</span>;
+        },
+      },
     ];
     if (isAdmin) {
       cols.push({
@@ -164,7 +205,19 @@ export default function Clients() {
         <DialogContent className="max-w-2xl"><DialogHeader><DialogTitle>{t('clients.details.title', { name: detailClient?.client_nickname })}</DialogTitle></DialogHeader>
           {detailLoading ? <PageLoader /> : <div className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2 text-sm">{[
             ['clid', t('clients.details.clid')], ['client_database_id', t('clients.details.cldbid')], ['client_nickname', t('clients.details.nickname')], ['client_unique_identifier', t('clients.details.uniqueId')], ['client_version', t('clients.details.version')], ['client_platform', t('clients.details.platform')], ['client_login_name', t('clients.details.loginName')], ['client_totalconnections', t('clients.details.totalConnections')], ['client_description', t('clients.details.description')], ['client_month_bytes_uploaded', t('clients.details.monthUploaded')], ['client_month_bytes_downloaded', t('clients.details.monthDownloaded')], ['client_total_bytes_uploaded', t('clients.details.totalUploaded')], ['client_total_bytes_downloaded', t('clients.details.totalDownloaded')], ['connection_connected_time', t('clients.details.connectedTime')], ['connection_bandwidth_sent_last_second_total', t('clients.details.sentBandwidth')], ['connection_bandwidth_received_last_second_total', t('clients.details.receivedBandwidth')],
-          ].map(([key, label]) => { const value = String(detailClientData?.[key] ?? '-'); return <div key={key} className="flex min-w-0 justify-between gap-3 rounded-md bg-muted/30 px-3 py-2"><span className="text-muted-foreground">{label}</span><span className="max-w-[65%] truncate text-right font-mono-data" title={value}>{value}</span></div>; })}</div>}
+          ].map(([key, label]) => {
+            const rawValue = detailClientData?.[key];
+            let value = String(rawValue ?? '-');
+            if (key === 'connection_connected_time') {
+              const milliseconds = Number(rawValue) || 0;
+              const lastConnected = Number(detailClientData?.client_lastconnected) || 0;
+              const duration = milliseconds > 0 ? milliseconds : lastConnected > 0 ? Math.max(0, Date.now() - lastConnected * 1000) : 0;
+              value = formatOnlineDuration(duration, t);
+            } else if (key === 'connection_bandwidth_sent_last_second_total' || key === 'connection_bandwidth_received_last_second_total') {
+              value = formatBandwidth(rawValue);
+            }
+            return <div key={key} className="flex min-w-0 justify-between gap-3 rounded-md bg-muted/30 px-3 py-2"><span className="text-muted-foreground">{label}</span><span className="max-w-[65%] truncate text-right font-mono-data" title={value}>{value}</span></div>;
+          })}</div>}
         </DialogContent>
       </Dialog>
 

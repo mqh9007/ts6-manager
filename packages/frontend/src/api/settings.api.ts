@@ -21,7 +21,7 @@ export const settingsApi = {
     }).then((r) => r.data);
   },
   updateMusicSource: (id: string, data: { enabled: boolean }) => api.patch<MusicSourceConfig>(`/settings/music-sources/${id}`, data).then((r) => r.data),
-  testMusicSource: (id: string) => api.post<{ initialized: boolean; requests: { url: string; ok: boolean; statusCode?: number; error?: string }[] }>(`/settings/music-sources/${id}/test`).then((r) => r.data),
+  testMusicSource: (id: string) => api.post<{ initialized: boolean; keyword: string; platforms: { id: string; name: string; ok: boolean; searchOk: boolean; playOk: boolean; message?: string }[]; requests: { url: string; ok: boolean; error?: string }[] }>(`/settings/music-sources/${id}/test`).then((r) => r.data),
   reorderMusicSources: (ids: string[]) => api.put<MusicSourceSettings>('/settings/music-sources/order', { ids }).then((r) => r.data),
   updateMusicSourcePreference: (preferredPlatform: string) => api.put<MusicSourceSettings>('/settings/music-sources/preference', { preferredPlatform }).then((r) => r.data),
   deleteMusicSource: (id: string) => api.delete(`/settings/music-sources/${id}`).then((r) => r.data),

@@ -7,7 +7,7 @@ import { resolveLxMusicUrl } from './lx-source-runtime.js';
 const MUSIC_SOURCES_KEY = 'music.sources';
 const MUSIC_SOURCE_DIR = path.resolve('data', 'music-sources');
 
-type SavedSource = { id: string; enabled: boolean; fileName: string; platforms: { id: string }[] };
+type SavedSource = { id: string; enabled: boolean; fileName: string; platforms: { id: string; name?: string }[] };
 type SavedSettings = { sources: SavedSource[]; preferredPlatform: string };
 
 export type MusicSearchResult = {
@@ -23,6 +23,8 @@ export type MusicPlaylist = {
   platform: MusicSearchResult['platform'];
   tracks: MusicSearchResult[];
 };
+
+export type MusicSourcePlatformTest = { id: string; name: string; ok: boolean; searchOk: boolean; playOk: boolean; message?: string };
 
 async function fetchJson(url: string): Promise<any> {
   return fetchJsonWithHeaders(url);
@@ -197,6 +199,28 @@ export class MusicSourceService {
       } catch (error: any) { lastError = error; }
     }
     throw lastError || new Error('No enabled music source supports the selected platform');
+  }
+
+  async testSource(source: SavedSource): Promise<{ keyword: string; platforms: MusicSourcePlatformTest[] }> {
+    const keyword = (process.env.MUSIC_SOURCE_TEST_KEYWORD || 'summer').trim() || 'summer';
+    const filePath = path.join(MUSIC_SOURCE_DIR, path.basename(source.fileName));
+    const code = fs.readFileSync(filePath, 'utf8');
+    const results: MusicSourcePlatformTest[] = [];
+    for (const platform of source.platforms) {
+      const item: MusicSourcePlatformTest = { id: platform.id, name: platform.name || platform.id, ok: false, searchOk: false, playOk: false };
+      try {
+        const search = platform.id === 'kg' ? await searchKugou(keyword) : platform.id === 'kw' ? await searchKuwo(keyword) : platform.id === 'mg' ? await searchMigu(keyword) : platform.id === 'wy' ? await searchNetease(keyword) : [];
+        if (!search.length) throw new Error('未搜索到歌曲');
+        item.searchOk = true;
+        const playableUrl = await resolveLxMusicUrl(code, platform.id, search[0].musicInfo);
+        const response = await fetch(playableUrl, { method: 'GET', headers: { Range: 'bytes=0-1023', 'User-Agent': 'TS6-MusicBot/1.0' }, signal: AbortSignal.timeout(15_000) });
+        if (!response.ok && response.status !== 206) throw new Error(`播放地址返回 HTTP ${response.status}`);
+        item.playOk = true;
+        item.ok = true;
+      } catch (error: any) { item.message = error?.message || '测试失败'; }
+      results.push(item);
+    }
+    return { keyword, platforms: results };
   }
 
   async playlist(url: string): Promise<MusicPlaylist> {

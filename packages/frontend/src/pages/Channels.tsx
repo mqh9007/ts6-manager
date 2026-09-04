@@ -27,6 +27,17 @@ interface ChannelNode {
   channel_flag_permanent: number;
   channel_flag_password: number;
   channel_codec_quality: number;
+  channel_description?: string;
+  channel_codec?: number;
+  channel_maxclients?: number;
+  channel_maxfamilyclients?: number;
+  channel_needed_talk_power?: number;
+  channel_flag_semi_permanent?: number;
+  channel_flag_temporary?: number;
+  channel_flag_maxclients_unlimited?: number;
+  channel_flag_maxfamilyclients_unlimited?: number;
+  channel_codec_is_unencrypted?: number;
+  channel_delete_delay?: number;
   children: ChannelNode[];
 }
 
@@ -86,11 +97,13 @@ interface TreeNodeProps {
   onDelete: (cid: number, name: string) => void;
   onEdit: (node: ChannelNode) => void;
   onDrop: (draggedCid: number, targetCid: number) => void;
+  onReorder: (draggedCid: number, parentCid: number, orderCid: number) => void;
+  previousSiblingCid: number;
   draggedCid: number | null;
   setDraggedCid: (cid: number | null) => void;
 }
 
-function ChannelTreeNode({ node, depth = 0, isAdmin, clientsByChannel, onDelete, onEdit, onDrop, draggedCid, setDraggedCid }: TreeNodeProps) {
+function ChannelTreeNode({ node, depth = 0, isAdmin, clientsByChannel, onDelete, onEdit, onDrop, onReorder, previousSiblingCid, draggedCid, setDraggedCid }: TreeNodeProps) {
   const [expanded, setExpanded] = useState(true);
   const [dropOver, setDropOver] = useState(false);
   const hasChildren = node.children.length > 0;
@@ -137,6 +150,7 @@ function ChannelTreeNode({ node, depth = 0, isAdmin, clientsByChannel, onDelete,
 
   return (
     <div>
+      {isAdmin && <div className="h-1 rounded-full hover:bg-primary/40 transition-colors" onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); const cid = Number(e.dataTransfer.getData('text/plain')); if (cid && cid !== node.cid) onReorder(cid, node.pid, previousSiblingCid); }} />}
       <div
         className={cn(
           'flex items-center gap-1 py-1 px-2 rounded-sm hover:bg-muted/30 transition-colors group text-sm',
@@ -199,7 +213,7 @@ function ChannelTreeNode({ node, depth = 0, isAdmin, clientsByChannel, onDelete,
           {clients.map((client) => (
             <ClientEntry key={client.clid} client={client} depth={depth + 1} />
           ))}
-          {node.children.map((child) => (
+          {node.children.map((child, index) => (
             <ChannelTreeNode
               key={child.cid}
               node={child}
@@ -209,6 +223,8 @@ function ChannelTreeNode({ node, depth = 0, isAdmin, clientsByChannel, onDelete,
               onDelete={onDelete}
               onEdit={onEdit}
               onDrop={onDrop}
+              onReorder={onReorder}
+              previousSiblingCid={index === 0 ? 0 : Number(node.children[index - 1].cid)}
               draggedCid={draggedCid}
               setDraggedCid={setDraggedCid}
             />
@@ -233,14 +249,17 @@ export default function Channels() {
   const [showCreate, setShowCreate] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ cid: number; name: string } | null>(null);
   const [editTarget, setEditTarget] = useState<ChannelNode | null>(null);
-  const [editForm, setEditForm] = useState({ channel_name: '', channel_topic: '', channel_password: '' });
-  const [newName, setNewName] = useState('');
+  const emptyForm = { channel_name: '', channel_topic: '', channel_description: '', channel_password: '', channel_codec: '4', channel_codec_quality: '6', channel_maxclients: '-1', channel_maxfamilyclients: '-1', channel_needed_talk_power: '0', channel_flag_permanent: true, channel_codec_is_unencrypted: false, channel_delete_delay: '0' };
+  const [editForm, setEditForm] = useState(emptyForm);
+  const [newForm, setNewForm] = useState(emptyForm);
+  const [newParentId, setNewParentId] = useState('0');
   const [draggedCid, setDraggedCid] = useState<number | null>(null);
 
   const tree = useMemo(() => {
     if (!channelData || !Array.isArray(channelData)) return [];
     return buildTree(channelData);
   }, [channelData]);
+  const availableParentChannels = useMemo(() => (Array.isArray(channelData) ? channelData : []).filter((ch: any) => Number(ch.cid) !== Number(editTarget?.cid)), [channelData, editTarget]);
 
   const clientsByChannel = useMemo(() => {
     const map = new Map<number, ClientInfo[]>();
@@ -267,9 +286,10 @@ export default function Channels() {
   if (channelsLoading) return <PageLoader />;
 
   const handleCreate = () => {
-    if (!newName.trim()) return;
-    createChannel.mutate({ channel_name: newName, channel_flag_permanent: 1 }, {
-      onSuccess: () => { toast.success(t('channels.toast.created')); setShowCreate(false); setNewName(''); },
+    if (!newForm.channel_name.trim()) return;
+    const data = { ...newForm, cpid: Number(newParentId), channel_codec: Number(newForm.channel_codec), channel_codec_quality: Number(newForm.channel_codec_quality), channel_maxclients: Number(newForm.channel_maxclients), channel_maxfamilyclients: Number(newForm.channel_maxfamilyclients), channel_needed_talk_power: Number(newForm.channel_needed_talk_power), channel_delete_delay: Number(newForm.channel_delete_delay), channel_flag_permanent: newForm.channel_flag_permanent ? 1 : 0, channel_codec_is_unencrypted: newForm.channel_codec_is_unencrypted ? 1 : 0 };
+    createChannel.mutate(data, {
+      onSuccess: () => { toast.success(t('channels.toast.created')); setShowCreate(false); setNewForm(emptyForm); setNewParentId('0'); },
       onError: () => toast.error(t('channels.toast.createFailed')),
     });
   };
@@ -284,14 +304,20 @@ export default function Channels() {
 
   const handleEditOpen = (node: ChannelNode) => {
     setEditTarget(node);
-    setEditForm({ channel_name: node.channel_name, channel_topic: node.channel_topic || '', channel_password: '' });
+    setEditForm({ ...emptyForm, channel_name: node.channel_name, channel_topic: node.channel_topic || '', channel_description: node.channel_description || '', channel_codec: String(node.channel_codec ?? 4), channel_codec_quality: String(node.channel_codec_quality ?? 6), channel_maxclients: String(node.channel_maxclients ?? -1), channel_maxfamilyclients: String(node.channel_maxfamilyclients ?? -1), channel_needed_talk_power: String(node.channel_needed_talk_power ?? 0), channel_flag_permanent: node.channel_flag_permanent === 1, channel_codec_is_unencrypted: node.channel_codec_is_unencrypted === 1, channel_delete_delay: String(node.channel_delete_delay ?? 0) });
   };
 
   const handleEditSave = () => {
     if (!editTarget || !editForm.channel_name.trim()) return;
-    const data: any = { channel_name: editForm.channel_name };
-    if (editForm.channel_topic !== undefined) data.channel_topic = editForm.channel_topic;
-    if (editForm.channel_password) data.channel_password = editForm.channel_password;
+    // Keep channelmove independent from channeledit. The channel list does not
+    // contain every channel property, so submitting default limit/flag values
+    // here can make an otherwise valid parent change fail with code 1543.
+    const data: any = {
+      channel_name: editForm.channel_name,
+      channel_topic: editForm.channel_topic,
+      channel_description: editForm.channel_description,
+    };
+    if (!editForm.channel_password) delete data.channel_password;
     editChannel.mutate({ cid: editTarget.cid, data }, {
       onSuccess: () => { toast.success(t('channels.toast.updated')); setEditTarget(null); },
       onError: () => toast.error(t('channels.toast.updateFailed')),
@@ -301,6 +327,17 @@ export default function Channels() {
   const handleDrop = (draggedCid: number, targetCid: number) => {
     moveChannel.mutate({ cid: draggedCid, data: { cpid: targetCid } }, {
       onSuccess: () => toast.success(t('channels.toast.moved')),
+      onError: () => toast.error(t('channels.toast.moveFailed')),
+    });
+  };
+
+  const handleReorder = (draggedCid: number, parentCid: number, orderCid: number) => {
+    // order=0 is meaningful here: TeamSpeak uses it to place the channel
+    // directly below the parent. Omitting order when reordering to the first
+    // position is interpreted as a parent-only move and may return
+    // "already member of channel" for an unchanged parent.
+    moveChannel.mutate({ cid: draggedCid, data: { cpid: parentCid, order: orderCid } }, {
+      onSuccess: () => toast.success(t('channels.toast.reordered')),
       onError: () => toast.error(t('channels.toast.moveFailed')),
     });
   };
@@ -335,7 +372,7 @@ export default function Channels() {
         <CardContent>
           <ScrollArea className="h-[600px]">
             <div className="space-y-0">
-              {tree.map((node) => (
+              {tree.map((node, index) => (
                 <ChannelTreeNode
                   key={node.cid}
                   node={node}
@@ -344,6 +381,8 @@ export default function Channels() {
                   onDelete={(cid, name) => setDeleteTarget({ cid, name })}
                   onEdit={handleEditOpen}
                   onDrop={handleDrop}
+                  onReorder={handleReorder}
+                  previousSiblingCid={index === 0 ? 0 : Number(tree[index - 1].cid)}
                   draggedCid={draggedCid}
                   setDraggedCid={setDraggedCid}
                 />
@@ -359,11 +398,16 @@ export default function Channels() {
           <DialogHeader>
             <DialogTitle>{t('channels.create')}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
             <div>
               <Label className="text-xs">{t('channels.form.name')}</Label>
-              <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder={t('channels.form.namePlaceholder')} autoFocus />
+              <Input value={newForm.channel_name} onChange={(e) => setNewForm({ ...newForm, channel_name: e.target.value })} placeholder={t('channels.form.namePlaceholder')} autoFocus />
             </div>
+            <div><Label className="text-xs block min-h-4">{t('channels.form.parent')}</Label><select className="h-9 w-full rounded-md border bg-background px-2 text-sm" value={newParentId} onChange={(e) => setNewParentId(e.target.value)}><option value="0">{t('channels.form.root')}</option>{availableParentChannels.map((ch: any) => <option key={ch.cid} value={ch.cid}>{ch.channel_name} (#{ch.cid})</option>)}</select></div>
+            <div className="grid grid-cols-2 gap-3"><div><Label className="text-xs block min-h-4">{t('channels.form.topic')}</Label><Input value={newForm.channel_topic} onChange={(e) => setNewForm({ ...newForm, channel_topic: e.target.value })} /></div><div><Label className="text-xs block min-h-4">{t('channels.form.description')}</Label><Input value={newForm.channel_description} onChange={(e) => setNewForm({ ...newForm, channel_description: e.target.value })} /></div></div>
+            <div className="grid grid-cols-3 gap-3"><div><Label className="text-xs block min-h-8">{t('channels.form.codec')}</Label><select className="h-9 w-full rounded-md border bg-background px-2 text-sm" value={newForm.channel_codec} onChange={(e) => setNewForm({ ...newForm, channel_codec: e.target.value })}><option value="4">{t('channels.form.voice')}</option><option value="5">{t('channels.form.music')}</option></select></div><div><Label className="text-xs block min-h-8">{t('channels.form.quality')}</Label><Input type="number" min="0" max="10" value={newForm.channel_codec_quality} onChange={(e) => setNewForm({ ...newForm, channel_codec_quality: e.target.value })} /></div><div><Label className="text-xs block min-h-8">{t('channels.form.talkPower')}</Label><Input type="number" min="0" value={newForm.channel_needed_talk_power} onChange={(e) => setNewForm({ ...newForm, channel_needed_talk_power: e.target.value })} /></div></div>
+            <div className="grid grid-cols-3 gap-3"><div><Label className="text-xs block min-h-8">{t('channels.form.maxClients')}</Label><Input type="number" min="-1" value={newForm.channel_maxclients} onChange={(e) => setNewForm({ ...newForm, channel_maxclients: e.target.value })} /></div><div><Label className="text-xs block min-h-8">{t('channels.form.maxFamilyClients')}</Label><Input type="number" min="-1" value={newForm.channel_maxfamilyclients} onChange={(e) => setNewForm({ ...newForm, channel_maxfamilyclients: e.target.value })} /></div><div><Label className="text-xs block min-h-8">{t('channels.form.password')}</Label><Input type="password" value={newForm.channel_password} onChange={(e) => setNewForm({ ...newForm, channel_password: e.target.value })} /></div></div>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={newForm.channel_flag_permanent} onChange={(e) => setNewForm({ ...newForm, channel_flag_permanent: e.target.checked })} />{t('channels.form.permanent')}</label>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCreate(false)}>{t('common.cancel')}</Button>
@@ -378,11 +422,15 @@ export default function Channels() {
           <DialogHeader>
             <DialogTitle>{t('channels.edit')}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
             <div>
               <Label className="text-xs">{t('channels.form.name')}</Label>
               <Input value={editForm.channel_name} onChange={(e) => setEditForm({ ...editForm, channel_name: e.target.value })} />
             </div>
+            <div><Label className="text-xs">{t('channels.form.description')}</Label><Input value={editForm.channel_description} onChange={(e) => setEditForm({ ...editForm, channel_description: e.target.value })} /></div>
+            <div className="grid grid-cols-3 gap-3"><div><Label className="text-xs">{t('channels.form.codec')}</Label><select className="h-9 w-full rounded-md border bg-background px-2 text-sm" value={editForm.channel_codec} onChange={(e) => setEditForm({ ...editForm, channel_codec: e.target.value })}><option value="4">{t('channels.form.voice')}</option><option value="5">{t('channels.form.music')}</option></select></div><div><Label className="text-xs">{t('channels.form.quality')}</Label><Input type="number" min="0" max="10" value={editForm.channel_codec_quality} onChange={(e) => setEditForm({ ...editForm, channel_codec_quality: e.target.value })} /></div><div><Label className="text-xs">{t('channels.form.talkPower')}</Label><Input type="number" min="0" value={editForm.channel_needed_talk_power} onChange={(e) => setEditForm({ ...editForm, channel_needed_talk_power: e.target.value })} /></div></div>
+            <div className="grid grid-cols-3 gap-3"><div><Label className="text-xs">{t('channels.form.maxClients')}</Label><Input type="number" min="-1" value={editForm.channel_maxclients} onChange={(e) => setEditForm({ ...editForm, channel_maxclients: e.target.value })} /></div><div><Label className="text-xs">{t('channels.form.maxFamilyClients')}</Label><Input type="number" min="-1" value={editForm.channel_maxfamilyclients} onChange={(e) => setEditForm({ ...editForm, channel_maxfamilyclients: e.target.value })} /></div></div>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={editForm.channel_flag_permanent} onChange={(e) => setEditForm({ ...editForm, channel_flag_permanent: e.target.checked })} />{t('channels.form.permanent')}</label>
             <div>
               <Label className="text-xs">{t('channels.form.topic')}</Label>
               <Input value={editForm.channel_topic} onChange={(e) => setEditForm({ ...editForm, channel_topic: e.target.value })} placeholder={t('channels.form.topicPlaceholder')} />

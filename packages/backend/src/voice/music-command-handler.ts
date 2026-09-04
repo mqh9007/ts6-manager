@@ -225,7 +225,10 @@ export class MusicCommandHandler {
 
       throw new Error('Use !bv <Bilibili BV link> for video links.');
     } catch (err: any) {
-      this.reply(bot, userClid, `播放失败：${err.message}`);
+      const message = err?.name === 'AbortError' || /operation was aborted/i.test(err?.message || '')
+        ? '音乐源请求超时，请稍后重试或在音乐源中切换平台。'
+        : err?.message || '未知错误';
+      this.reply(bot, userClid, `播放失败：${message}`);
     }
   }
 

@@ -11,12 +11,13 @@ export interface VideoStreamPreset {
 }
 
 export const STREAM_PRESETS: Record<string, VideoStreamPreset> = {
-  '480p': { label: '480p', width: 854, height: 480, bitrate: '1000k', framerate: 24 },
+  '480p': { label: '480p', width: 854, height: 480, bitrate: '900k', framerate: 24 },
   '720p': { label: '720p', width: 1280, height: 720, bitrate: '2500k', framerate: 30 },
   '1080p': { label: '1080p', width: 1920, height: 1080, bitrate: '4500k', framerate: 30 },
 };
 
-export const DEFAULT_PRESET = '720p';
+// 480p is the safe real-time default for ARM/Linux Sidecars.
+export const DEFAULT_PRESET = '480p';
 
 export interface VideoViewerInfo {
   clid: number;
