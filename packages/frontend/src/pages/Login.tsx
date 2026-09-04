@@ -15,6 +15,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const login = useLogin();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated());
+  const version = import.meta.env.VITE_APP_VERSION || 'dev';
 
   if (isAuthenticated) return <Navigate to="/dashboard" replace />;
 
@@ -50,7 +51,7 @@ export default function Login() {
                   id="username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="admin"
+                  placeholder={t('auth.login.loginform.username')}
                   autoComplete="username"
                   autoFocus
                 />
@@ -62,7 +63,7 @@ export default function Login() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder={t('auth.login.loginform.password')}
                   autoComplete="current-password"
                 />
               </div>
@@ -89,7 +90,7 @@ export default function Login() {
         </Card>
 
         <p className="text-center text-[10px] text-muted-foreground/50 mt-6 font-mono-data">
-          TS6 WEBUI v1.0.0
+          TS6 WEBUI {version}
         </p>
       </div>
     </div>

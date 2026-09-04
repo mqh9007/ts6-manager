@@ -536,7 +536,7 @@
         "reachable": "Music source is reachable",
         "unreachable": "Music source could not reach its services",
         "testFailed": "Music source test failed",
-        "testKeyword": "Test song: {{keyword}}",
+        "testKeyword": "Test song: <{{keyword}}>",
         "orderFailed": "Failed to save source order",
         "preferenceFailed": "Failed to update playback preference",
         "removed": "Music source removed",
@@ -1231,7 +1231,11 @@
       "signingIn": "Signing in...",
       "submit": "Sign In",
       "subtitle": "Server Administration Panel",
-      "title": "TeamSpeak 6 Manager"
+      "title": "TeamSpeak 6 Manager",
+            "loginform":{
+        "username": "Please enter your username",
+        "password": "Please enter your password"
+      }
     },
     "password": "Password",
     "setup": {

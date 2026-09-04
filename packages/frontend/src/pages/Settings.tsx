@@ -29,7 +29,7 @@ export default function Settings() {
     <div className="space-y-5">
       <h1 className="text-xl font-semibold">{t('settings.title')}</h1>
 
-      <Tabs defaultValue="account">
+      <Tabs defaultValue="connections">
         <TabsList>
           {isAdmin && <TabsTrigger value="connections"><Server className="h-3.5 w-3.5 mr-1" /> {t('settings.tabs.connections')}</TabsTrigger>}
           <TabsTrigger value="account"><Lock className="h-3.5 w-3.5 mr-1" /> {t('settings.tabs.account')}</TabsTrigger>

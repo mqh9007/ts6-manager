@@ -533,7 +533,7 @@
         "reachable": "可访问",
         "unreachable": "无法访问",
         "testFailed": "测试失败",
-        "testKeyword": "测试歌曲：{{keyword}}",
+        "testKeyword": "测试歌曲：《{{keyword}}》",
         "moveUp": "上移",
         "moveDown": "下移",
         "remove": "移除",
@@ -1234,7 +1234,11 @@
       "signingIn": "登录中...",
       "submit": "登录",
       "subtitle": "服务器管理面板",
-      "title": "TeamSpeak 6 Manager"
+      "title": "TeamSpeak 6 Manager",
+      "loginform":{
+        "username": "请输入用户名",
+        "password": "请输入密码"
+      }
     },
     "password": "密码",
     "setup": {
