@@ -62,10 +62,48 @@ export class MusicCommandHandler {
   }
 
   private async onTextMessage(botId: number, bot: VoiceBot, data: Record<string, string>): Promise<void> {
-    const msg = (data.msg || '').trim();
-    if (!msg.startsWith(CMD_PREFIX)) return;
-
-    const parts = msg.substring(CMD_PREFIX.length).split(/\s+/);
+    const rawMessage = data.msg || data.message || '';
+    const msg = rawMessage.replace(/\[[^\]]*\]/g, ' ').replace(/[：:，,]/g, ' ').trim();
+    if (msg.startsWith('@') || msg.startsWith('<@')) {
+      console.log(`[MusicCmd] Mention received by bot ${botId}: msg=${JSON.stringify(rawMessage)} targetmode=${data.targetmode || ''} invokerid=${data.invokerid || ''}`);
+    }
+    const nickname = bot.currentConfig.nickname.trim();
+    const tsMentionPattern = /^<@[^|>]+\|([^>]+)>\s*/i;
+    const tsMentionMatch = msg.match(tsMentionPattern);
+    const mentionPattern = nickname
+      ? new RegExp(`^@${nickname.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*`, 'i')
+      : null;
+    const mentionMatch = mentionPattern ? msg.match(mentionPattern) : null;
+    const isLegacyCommand = msg.startsWith(CMD_PREFIX);
+    let commandText: string;
+    if (tsMentionMatch && (!nickname || tsMentionMatch[1].trim().toLowerCase() === nickname.toLowerCase())) {
+      commandText = msg.substring(tsMentionMatch[0].length);
+      console.log(`[MusicCmd] TeamSpeak mention matched by bot ${botId}: name=${JSON.stringify(tsMentionMatch[1])}`);
+    } else if (mentionMatch) {
+      commandText = msg.substring(mentionMatch[0].length);
+    } else if (isLegacyCommand) {
+      commandText = msg.substring(CMD_PREFIX.length);
+    } else if (msg.startsWith('@')) {
+      // TeamSpeak may wrap mentions in BBCode or preserve a nickname with
+      // spaces. Locate the first known command after the leading mention.
+      const tokens = msg.split(/\s+/);
+      const commandIndex = tokens.findIndex((token, index) => {
+        if (index < 1) return false;
+        const normalized = token.replace(/^!/, '').toLowerCase();
+        return MUSIC_COMMANDS.has(normalized) || !!COMMAND_ALIASES[normalized] || !!COMMAND_ALIASES[token];
+      });
+      if (commandIndex >= 1) {
+        commandText = tokens.slice(commandIndex).join(' ').replace(/^!/, '');
+      } else {
+        const commandNames = [...MUSIC_COMMANDS, ...Object.keys(COMMAND_ALIASES)].sort((a, b) => b.length - a.length);
+        const lowerMessage = msg.toLowerCase();
+        const inlineCommand = commandNames.find((name) => lowerMessage.endsWith(name.toLowerCase()) || lowerMessage.includes(`@${name.toLowerCase()}`));
+        if (!inlineCommand) return;
+        const commandStart = lowerMessage.lastIndexOf(inlineCommand.toLowerCase());
+        commandText = msg.substring(commandStart);
+      }
+    } else return;
+    const parts = commandText.trim().split(/\s+/);
     const requestedCommand = parts[0].toLowerCase();
     const command = COMMAND_ALIASES[requestedCommand] || requestedCommand;
     if (!MUSIC_COMMANDS.has(command)) return;
@@ -171,24 +209,25 @@ export class MusicCommandHandler {
   }
 
   private handleHelp(bot: VoiceBot, userClid: number): void {
+    const prefix = `@${bot.currentConfig.nickname.trim() || '机器人'}`;
     this.reply(bot, userClid, [
       '音乐机器人命令：',
-      '!help / !帮助 —— 显示帮助',
-      '!play / !播放 <歌曲名> [歌手] —— 搜索并立即播放音乐',
-      '!bv / !视频 <B站链接或BV号> —— 播放B站视频音频',
-      '!playlist / !歌单 <歌单链接> [random|随机] —— 顺序或随机播放歌单',
-      '!radio / !电台 [编号] —— 查看或播放电台',
-      '!pause / !暂停 —— 暂停或恢复播放',
-      '!stop / !停止 —— 停止播放',
-      '!skip / !跳过、!next / !下一首 —— 播放下一首',
-      '!prev / !上一首 —— 播放上一首',
-      '!vol / !音量 <0-100> —— 设置音量',
-      '!np / !当前播放 —— 查看当前播放',
-      '!queue / !队列 [show|play|remove|clear] —— 管理播放队列',
-      '!add / !添加 <B站链接> —— 添加视频到队列',
-      '!stream / !推流 <链接> [清晰度] —— 启动视频推流',
-      '!stopstream / !停止推流 —— 停止视频推流',
-      '!viewers / !观看者 —— 查看视频观看者',
+      `${prefix} help / 帮助 —— 显示帮助`,
+      `${prefix} play / 播放 <歌曲名> [歌手] —— 搜索并立即播放音乐`,
+      `${prefix} bv / 视频 <B站链接或BV号> —— 播放B站视频音频`,
+      `${prefix} playlist / 歌单 <歌单链接> [random|随机] —— 顺序或随机播放歌单`,
+      `${prefix} radio / 电台 [编号] —— 查看或播放电台`,
+      `${prefix} pause / 暂停 —— 暂停或恢复播放`,
+      `${prefix} stop / 停止 —— 停止播放`,
+      `${prefix} skip / 跳过、next / 下一首 —— 播放下一首`,
+      `${prefix} prev / 上一首 —— 播放上一首`,
+      `${prefix} vol / 音量 <0-100> —— 设置音量`,
+      `${prefix} np / 当前播放 —— 查看当前播放`,
+      `${prefix} queue / 队列 [show|play|remove|clear] —— 管理播放队列`,
+      `${prefix} add / 添加 <B站链接> —— 添加视频到队列`,
+      `${prefix} stream / 推流 <链接> [清晰度] —— 启动视频推流`,
+      `${prefix} stopstream / 停止推流 —— 停止视频推流`,
+      `${prefix} viewers / 观看者 —— 查看视频观看者`,
     ].join('\n'));
   }
 

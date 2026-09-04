@@ -291,6 +291,13 @@ export class Ts3Client extends EventEmitter {
     }
   }
 
+  /** Subscribe to all text notification scopes used by music commands. */
+  registerTextNotifications(): void {
+    for (const event of ['textprivate', 'textchannel', 'textserver']) {
+      this.sendCommand(buildCommand('servernotifyregister', { event }));
+    }
+  }
+
   // ====== Packet Building & Sending ======
 
   private buildInit0(): Buffer {

@@ -354,6 +354,9 @@ export class VoiceBot extends EventEmitter {
     };
 
     await this.client.connect(opts);
+    // ServerQuery does not deliver channel messages until the text scopes
+    // are explicitly registered. Register after clientinit is complete.
+    this.client.registerTextNotifications();
     this._status = 'connected';
     this.emit('statusChange', this._status);
     this.emit('connected');
