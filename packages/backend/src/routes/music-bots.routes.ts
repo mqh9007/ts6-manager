@@ -200,6 +200,7 @@ musicBotRoutes.post('/:id/play', async (req: Request, res: Response, next) => {
       artist: song.artist ?? undefined,
       duration: song.duration ?? undefined,
       filePath: song.filePath,
+      musicTrack: song.musicMetadata ? JSON.parse(song.musicMetadata) : undefined,
       source: song.source as 'local' | 'youtube' | 'url',
       sourceUrl: song.sourceUrl ?? undefined,
     };
@@ -450,6 +451,7 @@ musicBotRoutes.post('/:id/queue', async (req: Request, res: Response, next) => {
       artist: song.artist ?? undefined,
       duration: song.duration ?? undefined,
       filePath: song.filePath,
+      musicTrack: song.musicMetadata ? JSON.parse(song.musicMetadata) : undefined,
       source: song.source as any,
       sourceUrl: song.sourceUrl ?? undefined,
     });
@@ -472,6 +474,10 @@ musicBotRoutes.post('/:id/queue/playlist', async (req: Request, res: Response, n
       include: { songs: { include: { song: true }, orderBy: { position: 'asc' } } },
     });
     if (!playlist) throw new AppError(404, 'Playlist not found');
+    if (playlist.importStatus === 'importing') throw new AppError(409, 'Playlist is still importing');
+    if (playlist.importStatus === 'failed' && playlist.songs.length === 0) {
+      throw new AppError(422, playlist.importError || 'Playlist has no playable songs');
+    }
 
     if (clearFirst) bot.queue.clear();
 
@@ -481,12 +487,17 @@ musicBotRoutes.post('/:id/queue/playlist', async (req: Request, res: Response, n
       artist: ps.song.artist ?? undefined,
       duration: ps.song.duration ?? undefined,
       filePath: ps.song.filePath,
+      musicTrack: ps.song.musicMetadata ? JSON.parse(ps.song.musicMetadata) : undefined,
       source: ps.song.source as any,
       sourceUrl: ps.song.sourceUrl ?? undefined,
     }));
 
     bot.queue.addMany(items);
-    res.json({ success: true, queueLength: bot.queue.length });
+    if (items.length > 0) {
+      bot.queue.playAt(clearFirst ? 0 : bot.queue.length - items.length);
+      await bot.play(items[0]);
+    }
+    res.json({ success: true, playing: items.length > 0, queueLength: bot.queue.length });
   } catch (err) { next(err); }
 });
 

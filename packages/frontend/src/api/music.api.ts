@@ -92,6 +92,8 @@ export const playlistsApi = {
     api.get('/playlists', { params: musicBotId ? { musicBotId } : undefined }).then((r) => r.data),
   get: (id: number) => api.get(`/playlists/${id}`).then((r) => r.data),
   create: (data: { name: string; musicBotId?: number }) => api.post('/playlists', data).then((r) => r.data),
+  import: (data: { url: string; serverConfigId: number; musicBotId?: number }) =>
+    api.post('/playlists/import', data, { timeout: 1800000 }).then((r) => r.data),
   update: (id: number, data: any) => api.put(`/playlists/${id}`, data).then((r) => r.data),
   delete: (id: number) => api.delete(`/playlists/${id}`),
   addSong: (id: number, songId: number) => api.post(`/playlists/${id}/songs`, { songId }).then((r) => r.data),

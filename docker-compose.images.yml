@@ -1,0 +1,59 @@
+services:
+  backend:
+    image: mqh9007/ts6-manager:backend-latest
+    container_name: ts6-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: file:/app/packages/backend/data/ts6webui.db
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
+      TS_ALLOW_SELF_SIGNED: ${TS_ALLOW_SELF_SIGNED:-false}
+      YT_COOKIE_FILE: ${YT_COOKIE_FILE:-}
+      JWT_ACCESS_EXPIRY: ${JWT_ACCESS_EXPIRY:-1d}
+      JWT_REFRESH_EXPIRY: ${JWT_REFRESH_EXPIRY:-7d}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      MUSIC_DIR: /data/music
+      SIDECAR_URL: http://ts6-sidecar:9800
+    volumes:
+      - backend-data:/app/packages/backend/data
+      - music-data:/data/music
+    ports:
+      - "3001:3001"
+    depends_on:
+      - sidecar
+    networks:
+      - ts6-network
+
+  sidecar:
+    image: mqh9007/ts6-manager:sidecar-latest
+    container_name: ts6-sidecar
+    restart: unless-stopped
+    environment:
+      SIDECAR_PORT: 9800
+    ports:
+      - "9800:9800"
+    expose:
+      - "9800"
+    networks:
+      - ts6-network
+
+  frontend:
+    image: mqh9007/ts6-manager:frontend-latest
+    container_name: ts6-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      - backend
+    networks:
+      - ts6-network
+
+volumes:
+  backend-data:
+  music-data:
+
+networks:
+  ts6-network:
+    driver: bridge

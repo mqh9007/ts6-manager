@@ -8,6 +8,7 @@ import { config } from '../config.js';
 
 const MUSIC_DIR = config.musicDir;
 const CMD_PREFIX = '!';
+const MUSIC_PLATFORM_LABELS: Record<string, string> = { tx: 'QQ音乐', wy: '网易云', kg: '酷狗', kw: '酷我', mg: '咪咕' };
 
 const MUSIC_COMMANDS = new Set([
   'help',
@@ -48,6 +49,17 @@ export class MusicCommandHandler {
     if (this.registeredBots.has(botId)) return;
     this.registeredBots.add(botId);
 
+    let avatarTask = Promise.resolve();
+    bot.on('nowPlaying', (item: QueueItem) => {
+      if (!item.musicTrack) return;
+      avatarTask = avatarTask.then(async () => {
+        if (bot.nowPlaying !== item) return;
+        const url = await new MusicSourceService(this.prisma).cover(item.musicTrack!);
+        if (!url) console.warn(`[MusicAvatar] Bot ${botId}: 音源及歌曲信息未返回可用封面 (${item.title})`);
+        if (url && bot.nowPlaying === item) await bot.updateCoverAvatar(url, item);
+      }).catch(error => console.warn(`[MusicAvatar] Bot ${botId}: ${error.message}`));
+    });
+
     bot.on('textMessage', (data: Record<string, string>) => {
       this.onTextMessage(botId, bot, data).catch(err => {
         console.error(`[MusicCmd] Error processing text message on bot ${botId}: ${err.message}`);
@@ -76,7 +88,10 @@ export class MusicCommandHandler {
     const mentionMatch = mentionPattern ? msg.match(mentionPattern) : null;
     const isLegacyCommand = msg.startsWith(CMD_PREFIX);
     let commandText: string;
-    if (tsMentionMatch && (!nickname || tsMentionMatch[1].trim().toLowerCase() === nickname.toLowerCase())) {
+    // The bot changes its visible nickname while playing. TeamSpeak's
+    // mention payload still carries the target mention, so do not compare
+    // the display name with the configured nickname here.
+    if (tsMentionMatch) {
       commandText = msg.substring(tsMentionMatch[0].length);
       console.log(`[MusicCmd] TeamSpeak mention matched by bot ${botId}: name=${JSON.stringify(tsMentionMatch[1])}`);
     } else if (mentionMatch) {
@@ -215,6 +230,8 @@ export class MusicCommandHandler {
       `${prefix} help / 帮助 —— 显示帮助`,
       `${prefix} play / 播放 <歌曲名> [歌手] —— 搜索并立即播放音乐`,
       `${prefix} bv / 视频 <B站链接或BV号> —— 播放B站视频音频`,
+      `${prefix} playlist / 歌单 —— 查看已保存歌单和用法`,
+      `${prefix} playlist / 歌单 <编号> —— 播放已保存歌单`,
       `${prefix} playlist / 歌单 <歌单链接> [random|随机] —— 顺序或随机播放歌单`,
       `${prefix} radio / 电台 [编号] —— 查看或播放电台`,
       `${prefix} pause / 暂停 —— 暂停或恢复播放`,
@@ -302,6 +319,7 @@ export class MusicCommandHandler {
 
     this.reply(bot, userClid, '正在搜索并加载音乐，请稍候...');
 
+    let resolvedPlatform = '';
     try {
       if (!args.startsWith('http://') && !args.startsWith('https://')) {
         const sourceService = new MusicSourceService(this.prisma);
@@ -311,10 +329,13 @@ export class MusicCommandHandler {
         const results = await sourceService.search(artist ? `${title} ${artist}` : title);
         const song = results[0];
         if (!song) throw new Error('No matching song found');
+        resolvedPlatform = song.platform;
         const streamUrl = await sourceService.resolve(song);
+        console.log(`[MusicCmd] Bot ${botId}: resolved platform=${MUSIC_PLATFORM_LABELS[song.platform] || song.platform}(${song.platform}), title=${song.title}, artist=${song.artist || 'Unknown'}`);
         const { filePath } = await downloadVideo(streamUrl, MUSIC_DIR);
         const queueItem: QueueItem = {
           id: `source_${botId}_${Date.now()}`,
+          musicTrack: song,
           title: song.title,
           artist: song.artist,
           duration: song.duration || undefined,
@@ -331,6 +352,7 @@ export class MusicCommandHandler {
       const message = err?.name === 'AbortError' || /operation was aborted/i.test(err?.message || '')
         ? '音乐源请求超时，请稍后重试或在音乐源中切换平台。'
         : err?.message || '未知错误';
+      console.error(`[MusicCmd] Play failed${resolvedPlatform ? ` platform=${MUSIC_PLATFORM_LABELS[resolvedPlatform] || resolvedPlatform}(${resolvedPlatform})` : ''}: ${message}`);
       this.reply(bot, userClid, `播放失败：${message}`);
     }
   }
@@ -351,8 +373,21 @@ export class MusicCommandHandler {
 
   private async handlePlaylist(bot: VoiceBot, userClid: number, args: string): Promise<void> {
     const [playlistUrl, mode] = args.split(/\s+/);
+    if (!playlistUrl) {
+      await this.listSavedPlaylists(bot, userClid, 1);
+      return;
+    }
+    if (/^(page|页)$/i.test(playlistUrl)) {
+      const page = /^\d+$/.test(mode || '') ? Number(mode) : 1;
+      await this.listSavedPlaylists(bot, userClid, page);
+      return;
+    }
+    if (/^\d+$/.test(playlistUrl)) {
+      await this.playSavedPlaylist(bot, userClid, Number(playlistUrl));
+      return;
+    }
     if (!playlistUrl || !/^https?:\/\//i.test(playlistUrl)) {
-      this.reply(bot, userClid, '用法：!playlist <网易云或酷我歌单链接> [random|随机]');
+      this.reply(bot, userClid, '用法：!playlist 查看列表，!playlist <编号> 播放已保存歌单，或 !playlist <歌单链接> [random|随机]');
       return;
     }
     this.reply(bot, userClid, '正在解析歌单，请稍候...');
@@ -368,9 +403,9 @@ export class MusicCommandHandler {
       }
       const downloadSong = async (index: number): Promise<QueueItem> => {
         const song = playlist.tracks[index];
-        const streamUrl = await service.resolve(song);
+        const streamUrl = await service.resolve(song, true);
         const { filePath } = await downloadVideo(streamUrl, MUSIC_DIR);
-        return { id: `playlist_${Date.now()}_${index}`, title: song.title, artist: song.artist, duration: song.duration || undefined, filePath, source: 'music-source', sourceUrl: streamUrl };
+        return { id: `playlist_${Date.now()}_${index}`, musicTrack: song, title: song.title, artist: song.artist, duration: song.duration || undefined, filePath, source: 'music-source', sourceUrl: streamUrl };
       };
       const preloadCount = Math.min(4, playlist.tracks.length);
       // Prepare only the first track plus three look-ahead tracks before starting.
@@ -404,6 +439,58 @@ export class MusicCommandHandler {
     } catch (err: any) {
       this.reply(bot, userClid, `歌单播放失败：${err.message}`);
     }
+  }
+
+  private async listSavedPlaylists(bot: VoiceBot, userClid: number, page: number): Promise<void> {
+    const pageSize = 10;
+    const playlists = await this.prisma.playlist.findMany({
+      include: { _count: { select: { songs: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+    const totalPages = Math.max(1, Math.ceil(playlists.length / pageSize));
+    const currentPage = Math.min(Math.max(page, 1), totalPages);
+    const rows = playlists.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+    const lines = rows.length
+      ? rows.map((item: any) => `[${item.id}] ${item.name} · ${MUSIC_PLATFORM_LABELS[item.platform] || '本地'} · ${item._count.songs} 首`)
+      : ['暂无已保存歌单。'];
+    this.reply(bot, userClid, [
+      '用法：!playlist <编号> 播放已保存歌单；!playlist page <页码> 查看指定页。',
+      `已保存歌单（第 ${currentPage}/${totalPages} 页）：`,
+      ...lines,
+      totalPages > 1 ? `下一页：!playlist page ${currentPage >= totalPages ? 1 : currentPage + 1}` : '',
+    ].filter(Boolean).join('\n'));
+  }
+
+  private async playSavedPlaylist(bot: VoiceBot, userClid: number, playlistId: number): Promise<void> {
+    const playlist = await this.prisma.playlist.findUnique({
+      where: { id: playlistId },
+      include: { songs: { include: { song: true }, orderBy: { position: 'asc' } } },
+    });
+    if (!playlist) {
+      this.reply(bot, userClid, `未找到歌单 #${playlistId}，请输入 !playlist 查看已保存歌单。`);
+      return;
+    }
+    const items: QueueItem[] = playlist.songs
+      .filter((item: any) => item.song?.filePath)
+      .map((item: any) => ({
+        id: `saved_playlist_${playlist.id}_${item.song.id}`,
+        title: item.song.title,
+        artist: item.song.artist || undefined,
+        duration: item.song.duration || undefined,
+        filePath: item.song.filePath,
+        musicTrack: item.song.musicMetadata ? JSON.parse(item.song.musicMetadata) : undefined,
+        source: 'music-source',
+        sourceUrl: item.song.sourceUrl || undefined,
+      }));
+    if (!items.length) {
+      this.reply(bot, userClid, `歌单「${playlist.name}」没有可播放歌曲。`);
+      return;
+    }
+    bot.queue.clear();
+    bot.queue.addMany(items);
+    bot.queue.playAt(0);
+    await bot.play(items[0]);
+    this.reply(bot, userClid, `已开始播放歌单「${playlist.name}」（${MUSIC_PLATFORM_LABELS[playlist.platform || ''] || '本地'}），共 ${items.length} 首。`);
   }
 
   private async enqueueOrPlay(bot: VoiceBot, userClid: number, queueItem: QueueItem): Promise<void> {

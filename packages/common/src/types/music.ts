@@ -91,6 +91,14 @@ export interface PlaybackState {
 export interface PlaylistSummary {
   id: number;
   name: string;
+  platform: string | null;
+  sourceUrl?: string | null;
+  importStatus?: 'ready' | 'importing' | 'completed' | 'failed';
+  importTotal?: number;
+  importCompleted?: number;
+  importSkipped?: number;
+  importError?: string | null;
+  importFailures?: { title: string; reason: string }[];
   musicBotId: number | null;
   songCount: number;
   createdAt: string;

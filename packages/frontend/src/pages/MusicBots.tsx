@@ -13,7 +13,7 @@ import {
 } from '@/hooks/use-music-bots';
 import { useSongs, useUploadSong, useDeleteSong, useVideoSearch, useVideoDownload, useVideoInfo, useVideoDownloadBatch } from '@/hooks/use-music-library';
 import { useRadioStations, useRadioPresets, useCreateRadioStation, useDeleteRadioStation, usePlayRadio } from '@/hooks/use-radio-stations';
-import { usePlaylists, usePlaylist, useCreatePlaylist, useDeletePlaylist, useAddSongToPlaylist, useRemoveSongFromPlaylist } from '@/hooks/use-playlists';
+import { usePlaylists, usePlaylist, useCreatePlaylist, useImportPlaylist, useDeletePlaylist, useAddSongToPlaylist, useRemoveSongFromPlaylist } from '@/hooks/use-playlists';
 import { useServers } from '@/hooks/use-servers';
 import { useServerStore } from '@/stores/server.store';
 import { useAuthStore } from '@/stores/auth.store';
@@ -54,6 +54,8 @@ function formatTime(seconds: number | null | undefined): string {
   const s = Math.floor(seconds % 60);
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
+
+const musicPlatformLabels: Record<string, string> = { wy: '网易云', kg: '酷狗', kw: '酷我', mg: '咪咕', local: '本地' };
 
 const statusColors: Record<string, string> = {
   stopped: 'bg-zinc-500',
@@ -1089,6 +1091,7 @@ function PlaylistsTab() {
   const { selectedConfigId } = useServerStore();
   const { data, isLoading } = usePlaylists();
   const createPlaylist = useCreatePlaylist();
+  const importPlaylist = useImportPlaylist();
   const deletePlaylist = useDeletePlaylist();
   const addSong = useAddSongToPlaylist();
   const removeSong = useRemoveSongFromPlaylist();
@@ -1097,6 +1100,7 @@ function PlaylistsTab() {
 
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
+  const [importUrl, setImportUrl] = useState('');
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [showAddSong, setShowAddSong] = useState(false);
@@ -1116,15 +1120,42 @@ function PlaylistsTab() {
     });
   };
 
+  const handleImport = () => {
+    if (!selectedConfigId || !importUrl.trim()) return;
+    importPlaylist.mutate({ url: importUrl.trim(), serverConfigId: selectedConfigId }, {
+      onSuccess: (result: any) => {
+        toast.success(`${t('music.bots.toast.playlistImported')}: ${result.name} (${result.songCount})`);
+        if (result.skipped > 0) {
+          const details = (result.failures || []).slice(0, 3)
+            .map((item: any) => `${item.title}: ${item.reason}`).join('\n');
+          toast.warning(t('music.bots.toast.playlistImportPartial', { count: result.skipped }), {
+            description: details || t('music.bots.toast.playlistImportCheckLogs'),
+            duration: 10000,
+          });
+        }
+        setImportUrl('');
+      },
+      onError: (error: any) => toast.error(error?.response?.data?.message || error?.message || t('music.bots.toast.importPlaylistFailed'), { duration: 12000 }),
+    });
+  };
+
   if (isLoading) return <PageLoader />;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">{t('music.bots.playlistCount', { count: playlists.length })}</p>
-        <Button size="sm" onClick={() => setShowCreate(true)}>
-          <Plus className="h-4 w-4 mr-1" /> {t('music.bots.newPlaylist')}
-        </Button>
+        <div className="flex gap-2">
+          <Input className="h-8 w-72 text-xs" value={importUrl} onChange={(e) => setImportUrl(e.target.value)}
+            placeholder={t('music.bots.importPlaylistUrl')} onKeyDown={(e) => e.key === 'Enter' && handleImport()} />
+          <Button size="sm" variant="secondary" onClick={handleImport} disabled={!selectedConfigId || !importUrl.trim() || importPlaylist.isPending}>
+            {importPlaylist.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Download className="h-4 w-4 mr-1" />}
+            {t('music.bots.importPlaylist')}
+          </Button>
+          <Button size="sm" onClick={() => setShowCreate(true)}>
+            <Plus className="h-4 w-4 mr-1" /> {t('music.bots.newPlaylist')}
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-4">
@@ -1143,7 +1174,12 @@ function PlaylistsTab() {
               <ListMusic className={`h-4 w-4 shrink-0 ${selectedId === pl.id ? 'text-primary' : 'text-muted-foreground'}`} />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium truncate">{pl.name}</p>
-                <p className="text-[10px] text-muted-foreground">{t('music.bots.songCount', { count: pl.songCount })}</p>
+                <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                  <span>{t('music.bots.songCount', { count: pl.songCount })}</span>
+                  {pl.platform && <Badge variant="outline" className="px-1 py-0 text-[9px]">{musicPlatformLabels[pl.platform] || pl.platform}</Badge>}
+                </div>
+                {pl.importStatus === 'importing' && <p className="text-[10px] text-amber-500">{t('music.bots.playlistImporting', { completed: pl.importCompleted || 0, total: pl.importTotal || 0 })}</p>}
+                {pl.importStatus === 'failed' && <p className="min-w-0 max-w-full truncate text-[10px] text-destructive" title={pl.importError || undefined}>{pl.importError || t('music.bots.playlistImportFailed')}</p>}
               </div>
               <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive shrink-0"
                 onClick={(e) => { e.stopPropagation(); setDeleteId(pl.id); }}
@@ -1159,13 +1195,23 @@ function PlaylistsTab() {
           <Card>
             <CardHeader className="py-3 px-4">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm">{detail.name}</CardTitle>
+                <div className="flex items-center gap-2"><CardTitle className="text-sm">{detail.name}</CardTitle>
+                  {detail.platform && <Badge variant="secondary" className="text-[10px]">{musicPlatformLabels[detail.platform] || detail.platform}</Badge>}
+                </div>
+                {detail.importStatus === 'importing' && <p className="text-[10px] text-amber-500">{t('music.bots.playlistImporting', { completed: detail.importCompleted || 0, total: detail.importTotal || 0 })}</p>}
+                {detail.importStatus === 'failed' && <p className="min-w-0 max-w-[28rem] truncate text-[10px] text-destructive" title={detail.importError || undefined}>{detail.importError || t('music.bots.playlistImportFailed')}</p>}
                 <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setShowAddSong(true)}>
                   <Plus className="h-3 w-3 mr-1" /> {t('music.bots.addSongs')}
                 </Button>
               </div>
             </CardHeader>
             <CardContent className="p-0">
+              {detail.importFailures?.length ? <div className="mx-4 mt-3 min-w-0 max-w-full overflow-hidden rounded border border-destructive/30 bg-destructive/5 p-2 text-[10px] text-destructive">
+                <p className="font-medium">{t('music.bots.playlistImportFailureDetails')}</p>
+                <div className="mt-1 max-h-32 space-y-0.5 overflow-y-auto pr-1">
+                  {detail.importFailures.map((failure, index) => <p key={`${failure.title}-${index}`} className="break-all whitespace-normal leading-4" title={`${failure.title}: ${failure.reason}`}>{failure.title}: {failure.reason}</p>)}
+                </div>
+              </div> : null}
               {detail.songs.length === 0 ? (
                 <div className="py-8 text-center text-xs text-muted-foreground">{t('music.bots.noSongsInPlaylist')}</div>
               ) : (

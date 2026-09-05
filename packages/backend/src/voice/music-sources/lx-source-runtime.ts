@@ -80,7 +80,7 @@ export async function testLxMusicSource(code: string): Promise<{ initialized: bo
 }
 
 /** Resolve a playable URL from an uploaded LX Music source. */
-export async function resolveLxMusicUrl(code: string, platform: string, musicInfo: Record<string, unknown>, quality = '128k'): Promise<string> {
+export async function resolveLxMusicUrl(code: string, platform: string, musicInfo: Record<string, unknown>, quality = '128k', action: 'musicUrl' | 'pic' = 'musicUrl'): Promise<string> {
   let requestHandler: ((payload: unknown) => unknown) | undefined;
   const eventNames = { inited: 'inited', request: 'request', updateAlert: 'updateAlert' };
   const request = (url: string, options: LxRequestOptions | ((err: Error | null, result?: unknown) => void) = {}, callback?: (err: Error | null, result?: unknown) => void) => {
@@ -102,10 +102,14 @@ export async function resolveLxMusicUrl(code: string, platform: string, musicInf
   };
   vm.runInNewContext(code, sandbox, { timeout: 1_500, filename: 'music-source.js' });
   if (!requestHandler) throw new Error('Music source does not provide a request handler');
-  const result = await Promise.race([
-    Promise.resolve(requestHandler({ action: 'musicUrl', source: platform, info: { musicInfo, type: quality } })),
-    new Promise<never>((_, reject) => setTimeout(() => reject(new Error('音乐源解析歌曲地址超时，请稍后重试')), SOURCE_RESOLVE_TIMEOUT_MS)),
-  ]);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let result: unknown;
+  try {
+    result = await Promise.race([
+      Promise.resolve(requestHandler({ action, source: platform, info: { musicInfo, type: quality } })),
+      new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error(action === 'pic' ? '音乐源获取封面超时' : '音乐源解析歌曲地址超时，请稍后重试')), action === 'pic' ? 5000 : SOURCE_RESOLVE_TIMEOUT_MS); }),
+    ]);
+  } finally { clearTimeout(timer); }
   if (typeof result !== 'string' || !result.startsWith('http')) throw new Error('Music source did not return a playable URL');
   return result;
 }

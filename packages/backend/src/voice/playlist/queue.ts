@@ -6,6 +6,7 @@ export interface QueueItem {
   artist?: string;
   duration?: number; // seconds
   filePath: string;
+  musicTrack?: import('../music-sources/music-source-service.js').MusicSearchResult;
   source: "local" | "youtube" | "bilibili" | "url" | "radio" | "music-source";
   sourceUrl?: string;
   streamUrl?: string; // If set, play as live stream (radio) instead of file

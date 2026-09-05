@@ -9,6 +9,7 @@ import { SidecarProcess, type SidecarConfig } from './streaming/sidecar-process.
 import { STREAM_PRESETS, DEFAULT_PRESET, type VideoViewerInfo, type VideoStreamStatus } from './streaming/types.js';
 import { getVideoCookieArgs, getVideoPlatform } from './audio/video-source.js';
 import { spawn } from 'child_process';
+import { coverImage, uploadCoverAvatar } from './audio/cover-avatar.js';
 
 /** Resolve a YouTube/yt-dlp-compatible URL to a direct stream URL */
 type ResolvedVideoSource = { video: string; audio?: string; headers?: string };
@@ -416,6 +417,12 @@ export class VoiceBot extends EventEmitter {
       this.emit('statusChange', this._status);
       throw err;
     }
+  }
+
+  async updateCoverAvatar(url: string, item: QueueItem): Promise<void> {
+    const image = await coverImage(url);
+    if (this._nowPlaying !== item) return;
+    await uploadCoverAvatar(this.client, this.config.serverHost, image, () => this._nowPlaying === item);
   }
 
   async playStream(item: QueueItem): Promise<void> {

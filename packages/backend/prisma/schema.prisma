@@ -158,6 +158,7 @@ model MusicBot {
 }
 
 model Song {
+  musicMetadata   String?
   id              Int       @id @default(autoincrement())
   title           String
   artist          String?
@@ -176,6 +177,14 @@ model Song {
 model Playlist {
   id         Int       @id @default(autoincrement())
   name       String
+  platform   String?
+  sourceUrl  String?
+  importStatus      String   @default("ready")
+  importTotal       Int      @default(0)
+  importCompleted   Int      @default(0)
+  importSkipped     Int      @default(0)
+  importError       String?
+  importFailures    String?
   musicBotId Int?
   musicBot   MusicBot? @relation(fields: [musicBotId], references: [id], onDelete: SetNull)
   createdAt  DateTime  @default(now())

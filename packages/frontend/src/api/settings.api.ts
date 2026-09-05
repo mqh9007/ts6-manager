@@ -9,7 +9,7 @@ export type MusicSourceConfig = {
   createdAt: string;
 };
 
-export type MusicSourceSettings = { sources: MusicSourceConfig[]; preferredPlatform: string };
+export type MusicSourceSettings = { sources: MusicSourceConfig[]; preferredPlatform: string; autoPlatformOrder?: string[] };
 
 export const settingsApi = {
   getMusicSources: () => api.get<MusicSourceSettings>('/settings/music-sources').then((r) => r.data),

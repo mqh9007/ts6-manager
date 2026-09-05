@@ -1,10 +1,65 @@
 import { Router, Request, Response } from 'express';
 import { requireRole } from '../middleware/rbac.js';
 import { AppError } from '../middleware/error-handler.js';
+import { config } from '../config.js';
+import { downloadVideo } from '../voice/audio/video-source.js';
+import { MusicSourceService } from '../voice/music-sources/music-source-service.js';
 
 export const playlistRoutes: Router = Router();
 
 playlistRoutes.use(requireRole('admin'));
+
+type ImportFailure = { title: string; reason: string };
+
+async function runPlaylistImport(prisma: any, playlistId: number, url: string, serverConfigId: number): Promise<void> {
+  const failures: ImportFailure[] = [];
+  try {
+    const service = new MusicSourceService(prisma);
+    const external = await service.playlist(url);
+    await prisma.playlist.update({
+      where: { id: playlistId },
+      data: { name: external.title, platform: external.platform, importTotal: external.tracks.length },
+    });
+
+    let importedCount = 0;
+    for (const track of external.tracks) {
+      try {
+        const streamUrl = await service.resolve(track, true);
+        const downloaded = await downloadVideo(streamUrl, config.musicDir);
+        const song = await prisma.song.create({
+          data: {
+            title: track.title, artist: track.artist || null,
+            duration: track.duration || downloaded.info.duration || null,
+            filePath: downloaded.filePath, source: 'music-source', sourceUrl: streamUrl,
+            fileSize: null, serverConfigId,
+            musicMetadata: JSON.stringify(track),
+          },
+        });
+        await prisma.playlistSong.create({ data: { playlistId, songId: song.id, position: importedCount } });
+        importedCount += 1;
+      } catch (error: any) {
+        const reason = String(error?.message || error || '未知错误').replace(/\s+/g, ' ').trim();
+        failures.push({ title: track.title, reason });
+        console.warn(`[PlaylistImport] Skipped ${track.title}: ${reason}`);
+      }
+      await prisma.playlist.update({
+        where: { id: playlistId },
+        data: { importCompleted: { increment: 1 }, importSkipped: failures.length, importFailures: JSON.stringify(failures) },
+      });
+    }
+    await prisma.playlist.update({
+      where: { id: playlistId },
+      data: { importStatus: importedCount ? 'completed' : 'failed', importError: importedCount ? null : '没有可播放歌曲' },
+    });
+  } catch (error: any) {
+    const reason = String(error?.message || error || '未知错误').replace(/\s+/g, ' ').trim();
+    console.error(`[PlaylistImport] Playlist ${playlistId} failed: ${reason}`);
+    await prisma.playlist.update({
+      where: { id: playlistId },
+      data: { importStatus: 'failed', importError: reason, importFailures: JSON.stringify(failures) },
+    }).catch((updateError: any) => console.error(`[PlaylistImport] Failed to save error: ${updateError.message}`));
+  }
+}
 
 // GET / — List playlists
 playlistRoutes.get('/', async (req: Request, res: Response, next) => {
@@ -19,6 +74,14 @@ playlistRoutes.get('/', async (req: Request, res: Response, next) => {
     res.json(playlists.map((p: any) => ({
       id: p.id,
       name: p.name,
+      platform: p.platform,
+      sourceUrl: p.sourceUrl,
+      importStatus: p.importStatus,
+      importTotal: p.importTotal,
+      importCompleted: p.importCompleted,
+      importSkipped: p.importSkipped,
+      importError: p.importError,
+      importFailures: p.importFailures ? JSON.parse(p.importFailures) : [],
       musicBotId: p.musicBotId,
       songCount: p._count.songs,
       createdAt: p.createdAt,
@@ -45,6 +108,14 @@ playlistRoutes.get('/:id', async (req: Request, res: Response, next) => {
     res.json({
       id: playlist.id,
       name: playlist.name,
+      platform: playlist.platform,
+      sourceUrl: playlist.sourceUrl,
+      importStatus: playlist.importStatus,
+      importTotal: playlist.importTotal,
+      importCompleted: playlist.importCompleted,
+      importSkipped: playlist.importSkipped,
+      importError: playlist.importError,
+      importFailures: playlist.importFailures ? JSON.parse(playlist.importFailures) : [],
       musicBotId: playlist.musicBotId,
       songCount: playlist.songs.length,
       createdAt: playlist.createdAt,
@@ -60,6 +131,35 @@ playlistRoutes.get('/:id', async (req: Request, res: Response, next) => {
         position: ps.position,
       })),
     });
+  } catch (err) { next(err); }
+});
+
+// POST /import — Resolve and persist an external music playlist
+playlistRoutes.post('/import', async (req: Request, res: Response, next) => {
+  try {
+    const prisma = req.app.locals.prisma;
+    const url = String(req.body?.url || '').trim();
+    const serverConfigId = Number(req.body?.serverConfigId);
+    const musicBotId = req.body?.musicBotId ? Number(req.body.musicBotId) : null;
+    if (!/^https?:\/\//i.test(url)) throw new AppError(400, 'A playlist URL is required');
+    if (!Number.isInteger(serverConfigId) || serverConfigId <= 0) {
+      throw new AppError(400, 'serverConfigId is required');
+    }
+    const server = await prisma.tsServerConfig.findUnique({ where: { id: serverConfigId }, select: { id: true } });
+    if (!server) throw new AppError(404, 'Server configuration not found');
+    if (musicBotId) {
+      const bot = await prisma.musicBot.findUnique({ where: { id: musicBotId }, select: { id: true } });
+      if (!bot) throw new AppError(404, 'Music bot not found');
+    }
+
+    const playlist = await prisma.playlist.create({
+      data: {
+        name: '导入中的歌单', sourceUrl: url, musicBotId, importStatus: 'importing',
+        importTotal: 0, importCompleted: 0, importSkipped: 0,
+      },
+    });
+    void runPlaylistImport(prisma, playlist.id, url, serverConfigId);
+    res.status(202).json({ id: playlist.id, name: playlist.name, importStatus: playlist.importStatus });
   } catch (err) { next(err); }
 });
 

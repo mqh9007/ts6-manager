@@ -37,11 +37,11 @@ type MusicSourceConfig = {
   createdAt: string;
 };
 
-type MusicSourceSettings = { sources: MusicSourceConfig[]; preferredPlatform: string };
-const DEFAULT_MUSIC_SOURCE_SETTINGS: MusicSourceSettings = { sources: [], preferredPlatform: 'auto' };
+type MusicSourceSettings = { sources: MusicSourceConfig[]; preferredPlatform: string; autoPlatformOrder?: string[] };
+const DEFAULT_MUSIC_SOURCE_SETTINGS: MusicSourceSettings = { sources: [], preferredPlatform: 'auto', autoPlatformOrder: [] };
 
 function defaultMusicSourceSettings(): MusicSourceSettings {
-  return { sources: [], preferredPlatform: DEFAULT_MUSIC_SOURCE_SETTINGS.preferredPlatform };
+  return { sources: [], preferredPlatform: DEFAULT_MUSIC_SOURCE_SETTINGS.preferredPlatform, autoPlatformOrder: [] };
 }
 
 const upload = multer({
@@ -65,7 +65,11 @@ async function getMusicSourceSettings(req: Request): Promise<MusicSourceSettings
   try {
     const parsed = JSON.parse(setting.value);
     if (!Array.isArray(parsed?.sources)) return defaultMusicSourceSettings();
-    return { sources: parsed.sources, preferredPlatform: typeof parsed.preferredPlatform === 'string' ? parsed.preferredPlatform : 'auto' };
+    return {
+      sources: parsed.sources,
+      preferredPlatform: typeof parsed.preferredPlatform === 'string' ? parsed.preferredPlatform : 'auto',
+      autoPlatformOrder: Array.isArray(parsed.autoPlatformOrder) ? parsed.autoPlatformOrder.map(String) : [],
+    };
   } catch { return defaultMusicSourceSettings(); }
 }
 

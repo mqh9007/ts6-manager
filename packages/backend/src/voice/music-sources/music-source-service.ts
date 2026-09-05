@@ -7,14 +7,14 @@ import { resolveLxMusicUrl } from './lx-source-runtime.js';
 const MUSIC_SOURCES_KEY = 'music.sources';
 const MUSIC_SOURCE_DIR = path.resolve('data', 'music-sources');
 
-type SavedSource = { id: string; enabled: boolean; fileName: string; platforms: { id: string; name?: string }[] };
-type SavedSettings = { sources: SavedSource[]; preferredPlatform: string };
+type SavedSource = { id: string; name?: string; enabled: boolean; fileName: string; platforms: { id: string; name?: string }[] };
+type SavedSettings = { sources: SavedSource[]; preferredPlatform: string; autoPlatformOrder?: string[] };
 
 export type MusicSearchResult = {
   title: string;
   artist: string;
   duration: number;
-  platform: 'kg' | 'kw' | 'mg' | 'wy';
+  platform: 'tx' | 'kg' | 'kw' | 'mg' | 'wy';
   musicInfo: Record<string, unknown>;
 };
 
@@ -51,6 +51,7 @@ async function searchKugou(query: string): Promise<MusicSearchResult[]> {
     platform: 'kg' as const,
     musicInfo: {
       name: item.SongName,
+      pic: item.Image?.replace('{size}', '256') || item.imgurl?.replace('{size}', '256'),
       singer: item.SingerName,
       songmid: item.Audioid,
       albumName: item.AlbumName,
@@ -65,6 +66,24 @@ async function searchKugou(query: string): Promise<MusicSearchResult[]> {
       },
     },
   })).filter((item: MusicSearchResult) => item.title && item.musicInfo.hash);
+}
+
+async function searchQQ(query: string): Promise<MusicSearchResult[]> {
+  const url = `https://c.y.qq.com/soso/fcgi-bin/client_search_cp?format=json&p=1&n=10&w=${encodeURIComponent(query)}`;
+  const data = await fetchJson(url);
+  const songs = data?.data?.song?.list;
+  if (!Array.isArray(songs)) throw new Error('QQ Music search returned no results');
+  return songs.map((item: any) => ({
+    title: String(item.songname || ''),
+    artist: Array.isArray(item.singer) ? item.singer.map((s: any) => s.name).join('、') : 'Unknown',
+    duration: Number(item.interval || 0),
+    platform: 'tx' as const,
+    musicInfo: {
+      name: item.songname, singer: Array.isArray(item.singer) ? item.singer.map((s: any) => s.name).join('、') : '',
+      songmid: item.songmid || item.songid, songid: item.songid, albumName: item.albumname, albumId: item.albumid,
+      albummid: item.albummid, interval: item.interval,
+    },
+  })).filter((item: MusicSearchResult) => item.title && item.musicInfo.songmid);
 }
 
 async function searchKuwo(query: string): Promise<MusicSearchResult[]> {
@@ -160,33 +179,60 @@ async function getKuwoPlaylist(url: string): Promise<MusicPlaylist> {
 export class MusicSourceService {
   constructor(private prisma: PrismaClient) {}
 
+  async cover(track: MusicSearchResult): Promise<string | undefined> {
+    try {
+      const settings = await this.getSettings();
+      for (const source of settings.sources.filter(s => s.enabled && s.platforms.some(p => p.id === track.platform))) {
+        try {
+          return await resolveLxMusicUrl(fs.readFileSync(path.join(MUSIC_SOURCE_DIR, path.basename(source.fileName)), 'utf8'), track.platform, track.musicInfo, '128k', 'pic');
+        } catch { /* Some community sources only implement musicUrl. */ }
+      }
+    } catch { /* Metadata can still provide a cover without an LX provider. */ }
+    const picture = track.musicInfo.pic || track.musicInfo.picUrl;
+    if (typeof picture === 'string' && /^https?:\/\//i.test(picture)) return picture;
+    if (track.platform === 'wy' && /^\d+$/.test(String(track.musicInfo.songmid))) {
+      try {
+        const data = await fetchJson(`https://music.163.com/api/song/detail?ids=${encodeURIComponent(JSON.stringify([track.musicInfo.songmid]))}`);
+        return data?.songs?.[0]?.album?.picUrl || undefined;
+      } catch { return undefined; }
+    }
+    return undefined;
+  }
+
   async search(query: string): Promise<MusicSearchResult[]> {
     const config = await this.getSettings();
     if (config.preferredPlatform === 'auto') {
-      const available = ['kg', 'kw', 'mg', 'wy'].filter((platform) => config.sources.some((source) => source.enabled && source.platforms.some((item) => item.id === platform)));
+      const defaultOrder = ['tx', 'kg', 'wy', 'mg', 'kw'];
+      const configuredOrder = config.autoPlatformOrder || [];
+      const platformOrder = configuredOrder.length ? configuredOrder : defaultOrder;
+      const available = platformOrder
+        .filter((platform) => config.sources.some((source) => source.enabled && source.platforms.some((item) => item.id === platform)));
       let lastError: Error | undefined;
       for (const platform of available) {
         try {
-          const result = platform === 'kg' ? await searchKugou(query) : platform === 'kw' ? await searchKuwo(query) : platform === 'mg' ? await searchMigu(query) : await searchNetease(query);
+          const result = platform === 'tx' ? await searchQQ(query) : platform === 'kg' ? await searchKugou(query) : platform === 'kw' ? await searchKuwo(query) : platform === 'mg' ? await searchMigu(query) : await searchNetease(query);
           if (result.length) return result;
         } catch (error: any) { lastError = error; }
       }
       throw lastError || new Error('No enabled music source search provider is available');
     }
     const selectedPlatform = config.preferredPlatform.split(':')[1];
-    if (!['kg', 'kw', 'mg', 'wy'].includes(selectedPlatform)) throw new Error('Search is not available for this platform yet. Select 自动、网易云、酷狗、酷我 or 咪咕。');
+    if (!['tx', 'kg', 'kw', 'mg', 'wy'].includes(selectedPlatform)) throw new Error('Search is not available for this platform yet. Select 自动、QQ音乐、网易云、酷狗、酷我 or 咪咕。');
     if (!config.sources.some((source) => source.enabled && source.platforms.some((platform) => platform.id === selectedPlatform))) throw new Error('No enabled music source supports the selected platform');
+    if (selectedPlatform === 'tx') return searchQQ(query);
     if (selectedPlatform === 'kw') return searchKuwo(query);
     if (selectedPlatform === 'mg') return searchMigu(query);
     if (selectedPlatform === 'wy') return searchNetease(query);
     return searchKugou(query);
   }
 
-  async resolve(result: MusicSearchResult): Promise<string> {
+  /** Resolve a track using its own platform. Playlist imports must not be
+   * blocked by the global preferred platform setting. */
+  async resolve(result: MusicSearchResult, ignorePreferredPlatform = false): Promise<string> {
     const config = await this.getSettings();
     let candidates = config.sources.filter((source) => source.enabled && source.platforms.some((platform) => platform.id === result.platform));
     const preferred = config.preferredPlatform;
-    if (preferred !== 'auto') {
+    if (!ignorePreferredPlatform && preferred !== 'auto') {
       const [sourceId, platform] = preferred.split(':');
       candidates = platform === result.platform ? candidates.filter((source) => source.id === sourceId) : [];
     }
@@ -209,7 +255,7 @@ export class MusicSourceService {
     for (const platform of source.platforms) {
       const item: MusicSourcePlatformTest = { id: platform.id, name: platform.name || platform.id, ok: false, searchOk: false, playOk: false };
       try {
-        const search = platform.id === 'kg' ? await searchKugou(keyword) : platform.id === 'kw' ? await searchKuwo(keyword) : platform.id === 'mg' ? await searchMigu(keyword) : platform.id === 'wy' ? await searchNetease(keyword) : [];
+      const search = platform.id === 'tx' ? await searchQQ(keyword) : platform.id === 'kg' ? await searchKugou(keyword) : platform.id === 'kw' ? await searchKuwo(keyword) : platform.id === 'mg' ? await searchMigu(keyword) : platform.id === 'wy' ? await searchNetease(keyword) : [];
         if (!search.length) throw new Error('未搜索到歌曲');
         item.searchOk = true;
         const playableUrl = await resolveLxMusicUrl(code, platform.id, search[0].musicInfo);
@@ -221,6 +267,38 @@ export class MusicSourceService {
       results.push(item);
     }
     return { keyword, platforms: results };
+  }
+
+  /** Silently test every enabled source/platform and persist the automatic platform order. */
+  async refreshAutomaticPriority(): Promise<void> {
+    const settings = await this.getSettings();
+    const enabledSources = settings.sources.filter((source) => source.enabled);
+    const platformIds = ['tx', 'kg', 'wy', 'mg', 'kw'];
+    const availablePlatforms = platformIds.filter((platform) => enabledSources.some((source) => source.platforms.some((item) => item.id === platform)));
+    const healthyCounts = new Map(availablePlatforms.map((platform) => [platform, 0]));
+
+    console.log(`[MusicSourceHealth] Starting check: ${enabledSources.length} source(s), ${availablePlatforms.length} platform(s)`);
+    for (const source of enabledSources) {
+      let result: { keyword: string; platforms: MusicSourcePlatformTest[] };
+      try {
+        result = await this.testSource(source);
+      } catch (error: any) {
+        console.warn(`[MusicSourceHealth] ${source.name}: check failed: ${error?.message || error}`);
+        continue;
+      }
+      for (const platform of result.platforms) {
+        if (platform.ok) healthyCounts.set(platform.id, (healthyCounts.get(platform.id) || 0) + 1);
+        console.log(`[MusicSourceHealth] ${source.name} / ${platform.name}: ${platform.ok ? 'OK' : 'FAIL'}${platform.message ? ` - ${platform.message}` : ''}`);
+      }
+    }
+
+    const autoPlatformOrder = [...availablePlatforms].filter((platform) => (healthyCounts.get(platform) || 0) > 0).sort((a, b) => {
+      const countDiff = (healthyCounts.get(b) || 0) - (healthyCounts.get(a) || 0);
+      return countDiff || platformIds.indexOf(a) - platformIds.indexOf(b);
+    });
+    settings.autoPlatformOrder = autoPlatformOrder;
+    await this.saveSettings(settings);
+    console.log(`[MusicSourceHealth] Automatic priority: ${autoPlatformOrder.map((platform) => `${platform}(${healthyCounts.get(platform) || 0})`).join(' -> ') || 'none'}`);
   }
 
   async playlist(url: string): Promise<MusicPlaylist> {
@@ -236,5 +314,13 @@ export class MusicSourceService {
     const config = JSON.parse(setting.value) as SavedSettings;
     if (!Array.isArray(config.sources)) throw new Error('Music source configuration is invalid');
     return config;
+  }
+
+  private async saveSettings(settings: SavedSettings): Promise<void> {
+    await this.prisma.appSetting.upsert({
+      where: { key: MUSIC_SOURCES_KEY },
+      create: { key: MUSIC_SOURCES_KEY, value: JSON.stringify(settings) },
+      update: { value: JSON.stringify(settings) },
+    });
   }
 }

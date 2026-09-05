@@ -5,6 +5,10 @@ export function usePlaylists(musicBotId?: number) {
   return useQuery({
     queryKey: ['playlists', musicBotId],
     queryFn: () => playlistsApi.list(musicBotId),
+    refetchInterval: (query) => {
+      const playlists = query.state.data as any[] | undefined;
+      return playlists?.some((playlist) => playlist.importStatus === 'importing') ? 3000 : false;
+    },
   });
 }
 
@@ -13,6 +17,7 @@ export function usePlaylist(id: number | null) {
     queryKey: ['playlist', id],
     queryFn: () => playlistsApi.get(id!),
     enabled: !!id,
+    refetchInterval: (query) => query.state.data?.importStatus === 'importing' ? 3000 : false,
   });
 }
 
@@ -20,6 +25,14 @@ export function useCreatePlaylist() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: { name: string; musicBotId?: number }) => playlistsApi.create(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['playlists'] }),
+  });
+}
+
+export function useImportPlaylist() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { url: string; serverConfigId: number; musicBotId?: number }) => playlistsApi.import(data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['playlists'] }),
   });
 }

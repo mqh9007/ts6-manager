@@ -11,6 +11,7 @@ import { setVideoCookieFile, type VideoPlatform } from './voice/audio/video-sour
 import jwt from 'jsonwebtoken';
 import fs from 'fs';
 import path from 'path';
+import { MusicSourceService } from './voice/music-sources/music-source-service.js';
 
 async function main() {
   console.log(`version: ${process.env.APP_VERSION || 'dev'}`);
@@ -92,6 +93,18 @@ async function main() {
   const musicCommandHandler = new MusicCommandHandler(prisma, voiceBotManager);
   voiceBotManager.setMusicCommandHandler(musicCommandHandler);
 
+  // Run music-source health checks in the background. The result is used only
+  // for automatic platform ordering; manual platform selection is unchanged.
+  const musicSourceService = new MusicSourceService(prisma);
+  const runMusicSourceHealthCheck = () => {
+    void musicSourceService.refreshAutomaticPriority().catch((error: any) => {
+      console.error(`[MusicSourceHealth] Check failed: ${error?.message || error}`);
+    });
+  };
+  runMusicSourceHealthCheck();
+  const musicSourceHealthTimer = setInterval(runMusicSourceHealthCheck, 60 * 60 * 1000);
+  musicSourceHealthTimer.unref?.();
+
   server.listen(config.port, () => {
     console.log(`[TS6 WebUI] Backend running on http://localhost:${config.port}`);
     console.log(`[TS6 WebUI] WebSocket available at ws://localhost:${config.port}/ws`);
@@ -101,6 +114,7 @@ async function main() {
   // Graceful shutdown
   const shutdown = async () => {
     console.log('\n[TS6 WebUI] Shutting down...');
+    clearInterval(musicSourceHealthTimer);
     await voiceBotManager.stopAll();
     botEngine.destroy();
     connectionPool.destroy();
